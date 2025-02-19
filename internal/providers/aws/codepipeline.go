@@ -9,21 +9,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline/types"
 )
 
-// ApprovalAction represents a manual approval action in CodePipeline
-type ApprovalAction struct {
-	PipelineName string
-	StageName    string
-	ActionName   string
-	Token        string
-}
-
-// Service handles AWS CodePipeline operations
-type Service struct {
+// CodePipelineService handles AWS CodePipeline operations
+type CodePipelineService struct {
 	client *codepipeline.Client
 }
 
-// NewService creates a new AWS CodePipeline service
-func NewService(ctx context.Context, profile, region string) (*Service, error) {
+// NewCodePipelineService creates a new AWS CodePipeline service
+func NewCodePipelineService(profile, region string) (*CodePipelineService, error) {
 	if profile == "" {
 		return nil, fmt.Errorf("AWS profile must be specified")
 	}
@@ -31,7 +23,7 @@ func NewService(ctx context.Context, profile, region string) (*Service, error) {
 		return nil, fmt.Errorf("AWS region must be specified")
 	}
 
-	cfg, err := config.LoadDefaultConfig(ctx,
+	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithSharedConfigProfile(profile),
 		config.WithRegion(region),
 	)
@@ -40,11 +32,11 @@ func NewService(ctx context.Context, profile, region string) (*Service, error) {
 	}
 
 	client := codepipeline.NewFromConfig(cfg)
-	return &Service{client: client}, nil
+	return &CodePipelineService{client: client}, nil
 }
 
 // ListPendingApprovals returns all pending manual approval actions
-func (s *Service) ListPendingApprovals(ctx context.Context) ([]ApprovalAction, error) {
+func (s *CodePipelineService) ListPendingApprovals(ctx context.Context) ([]ApprovalAction, error) {
 	var approvals []ApprovalAction
 
 	// List all pipelines first
@@ -94,25 +86,39 @@ func (s *Service) ListPendingApprovals(ctx context.Context) ([]ApprovalAction, e
 	return approvals, nil
 }
 
-// ApproveAction approves a manual approval action
-func (s *Service) ApproveAction(ctx context.Context, pipelineName, stageName, actionName, token, summary string) error {
-	input := &codepipeline.PutApprovalResultInput{
-		PipelineName: &pipelineName,
-		StageName:    &stageName,
-		ActionName:   &actionName,
-		Token:        &token,
-		Result: &types.ApprovalResult{
-			Summary: &summary,
-			Status:  types.ApprovalStatusApproved,
-		},
+// HandleApproval handles a manual approval action
+func (s *CodePipelineService) HandleApproval(ctx context.Context, params map[string]interface{}) error {
+	// Extract parameters
+	pipelineName, ok := params["pipeline_name"].(string)
+	if !ok {
+		return fmt.Errorf("pipeline_name parameter is required")
+	}
+	stageName, ok := params["stage_name"].(string)
+	if !ok {
+		return fmt.Errorf("stage_name parameter is required")
+	}
+	actionName, ok := params["action_name"].(string)
+	if !ok {
+		return fmt.Errorf("action_name parameter is required")
+	}
+	token, ok := params["token"].(string)
+	if !ok {
+		return fmt.Errorf("token parameter is required")
+	}
+	summary, ok := params["summary"].(string)
+	if !ok {
+		return fmt.Errorf("summary parameter is required")
+	}
+	approve, ok := params["approve"].(bool)
+	if !ok {
+		return fmt.Errorf("approve parameter is required")
 	}
 
-	_, err := s.client.PutApprovalResult(ctx, input)
-	return err
-}
+	status := types.ApprovalStatusRejected
+	if approve {
+		status = types.ApprovalStatusApproved
+	}
 
-// RejectAction rejects a manual approval action
-func (s *Service) RejectAction(ctx context.Context, pipelineName, stageName, actionName, token, summary string) error {
 	input := &codepipeline.PutApprovalResultInput{
 		PipelineName: &pipelineName,
 		StageName:    &stageName,
@@ -120,7 +126,7 @@ func (s *Service) RejectAction(ctx context.Context, pipelineName, stageName, act
 		Token:        &token,
 		Result: &types.ApprovalResult{
 			Summary: &summary,
-			Status:  types.ApprovalStatusRejected,
+			Status:  status,
 		},
 	}
 

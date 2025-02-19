@@ -4,25 +4,40 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/HenryOwenz/ezop/internal/ui/handlers"
+	"github.com/HenryOwenz/ezop/internal/ui/model"
+	"github.com/HenryOwenz/ezop/internal/ui/views"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
+type program struct {
+	model model.Model
+}
+
+func (p program) Init() tea.Cmd {
+	return nil
+}
+
+func (p program) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	p.model, cmd = handlers.Update(p.model, msg)
+	return p, cmd
+}
+
+func (p program) View() string {
+	return views.View(p.model)
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "ezop",
-	Short: "Interactive CLI tool for managing cloud operations",
-	Long: `ezop is an interactive terminal UI for managing cloud operations across multiple providers.
-It provides a beautiful, user-friendly interface to:
-
-- Select from multiple cloud providers (AWS, Azure, GCP)
-- Choose from available services for each provider
-- Execute operations with guided prompts
-- Approve or reject actions with clear context
-- Confirm actions with safety checks
-- Get immediate feedback with color-coded status updates`,
+	Short: "A user-friendly interactive CLI tool for managing cloud operations",
 	Run: func(cmd *cobra.Command, args []string) {
-		p := tea.NewProgram(initialModel("", ""))
-		if _, err := p.Run(); err != nil {
+		p := program{
+			model: model.NewModel(),
+		}
+
+		if _, err := tea.NewProgram(p).Run(); err != nil {
 			fmt.Printf("Error running program: %v", err)
 			os.Exit(1)
 		}
@@ -80,7 +95,10 @@ PowerShell:
 	rootCmd.AddCommand(completionCmd)
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-func Execute() error {
-	return rootCmd.Execute()
+// Execute runs the root command
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Printf("Error executing command: %v", err)
+		os.Exit(1)
+	}
 }
