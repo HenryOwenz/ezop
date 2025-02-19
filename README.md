@@ -21,17 +21,38 @@ All commands require both an AWS profile and region to be specified:
 
 This ensures you're always aware of which AWS account and region you're operating in.
 
-### List pending approvals
+### Interactive Mode (Recommended)
+
+The interactive mode provides a user-friendly interface for managing approvals:
+
+```bash
+ciselect interactive --profile my-aws-profile --region us-west-2
+# or use the shorthand
+ciselect i --profile my-aws-profile --region us-west-2
+```
+
+Features:
+- Clear, formatted table of pending approvals
+- Interactive selection of approvals to manage
+- Guided approve/reject workflow
+- Confirmation steps for safety
+- Color-coded output for better visibility
+
+### Command-Line Mode
+
+For scripting or direct command usage:
+
+#### List pending approvals
 ```bash
 ciselect list --profile my-aws-profile --region us-west-2
 ```
 
-### Approve an action
+#### Approve an action
 ```bash
 ciselect approve <pipeline-name> <stage-name> <action-name> --profile my-aws-profile --region us-west-2 -s "Approved by ciselect"
 ```
 
-### Reject an action
+#### Reject an action
 ```bash
 ciselect reject <pipeline-name> <stage-name> <action-name> --profile my-aws-profile --region us-west-2 -s "Rejected by ciselect"
 ```
@@ -72,5 +93,6 @@ go build
 
 - **Required AWS Profile**: The tool requires explicit specification of the AWS profile to use, preventing accidental operations on the wrong AWS account.
 - **Required AWS Region**: The tool requires explicit specification of the AWS region, ensuring clarity about where operations are being performed.
+- **Interactive Mode**: Provides clear visibility and confirmation steps for all actions.
 - **Explicit Permissions**: The IAM policy above specifies the exact permissions needed for operation.
 - **Error Handling**: Clear error messages when profile, region, or other required parameters are missing or invalid. 
