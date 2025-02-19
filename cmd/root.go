@@ -1,40 +1,32 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "ciselect",
-	Short: "A CLI tool for managing AWS CodePipeline approvals",
-	Long: `ciselect is a command line tool that helps you manage AWS CodePipeline
-manual approvals efficiently. It provides a simple interface to list and
-approve/reject pending approvals in your pipelines.
+	Short: "Interactive CLI tool for managing AWS CodePipeline approvals",
+	Long: `ciselect is an interactive terminal UI for managing AWS CodePipeline manual approvals.
+It provides a beautiful, user-friendly interface to:
 
-Required AWS Configuration:
-  - AWS Profile: Use --profile or -p to specify which AWS profile to use
-  - AWS Region: Use --region or -r to specify which AWS region to use
-
-Examples:
-  # List all pending approvals
-  ciselect list --profile prod-account --region us-west-2
-
-  # Approve a specific action
-  ciselect approve pipeline-name stage-name action-name \
-    --profile prod-account \
-    --region us-west-2 \
-    --summary "Approved by John Doe"
-
-  # Reject a specific action
-  ciselect reject pipeline-name stage-name action-name \
-    --profile prod-account \
-    --region us-west-2 \
-    --summary "Rejected due to test failures"
-
-For more information and examples, visit:
-https://github.com/HenryOwenz/ciselect`,
+- Select from available AWS profiles or type your own
+- Choose from common regions or type a custom one
+- View and select pending approvals in a clear, formatted list
+- Approve or reject actions with guided prompts
+- Confirm actions with clear context
+- Get immediate feedback with color-coded status updates`,
+	Run: func(cmd *cobra.Command, args []string) {
+		p := tea.NewProgram(initialModel("", ""))
+		if _, err := p.Run(); err != nil {
+			fmt.Printf("Error running program: %v", err)
+			os.Exit(1)
+		}
+	},
 }
 
 func init() {

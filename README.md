@@ -1,6 +1,6 @@
 # ciselect
 
-A CLI tool for managing AWS CodePipeline manual approvals efficiently.
+A user-friendly interactive CLI tool for managing AWS CodePipeline manual approvals.
 
 ## Installation
 
@@ -15,47 +15,26 @@ go install github.com/HenryOwenz/ciselect@latest
 
 ## Usage
 
-All commands require both an AWS profile and region to be specified:
-- `--profile` or `-p`: AWS profile to use
-- `--region` or `-r`: AWS region to use
-
-This ensures you're always aware of which AWS account and region you're operating in.
-
-### Interactive Mode (Recommended)
-
-The interactive mode provides a user-friendly interface for managing approvals:
-
+Simply run:
 ```bash
-ciselect interactive --profile my-aws-profile --region us-west-2
-# or use the shorthand
-ciselect i --profile my-aws-profile --region us-west-2
+ciselect
 ```
 
-Features:
+The interactive interface will guide you through:
+1. Selecting an AWS profile (from your configured profiles or type a custom one)
+2. Choosing an AWS region (from common regions or type a custom one)
+3. Managing your pipeline approvals with a beautiful terminal UI
+
+## Features
+
+The interactive interface provides:
+- Beautiful terminal UI with color-coded elements
+- List of available AWS profiles with ability to type custom ones
+- List of AWS regions with ability to type custom ones
 - Clear, formatted table of pending approvals
-- Interactive selection of approvals to manage
+- Interactive selection and management of approvals
 - Guided approve/reject workflow
 - Confirmation steps for safety
-- Color-coded output for better visibility
-
-### Command-Line Mode
-
-For scripting or direct command usage:
-
-#### List pending approvals
-```bash
-ciselect list --profile my-aws-profile --region us-west-2
-```
-
-#### Approve an action
-```bash
-ciselect approve <pipeline-name> <stage-name> <action-name> --profile my-aws-profile --region us-west-2 -s "Approved by ciselect"
-```
-
-#### Reject an action
-```bash
-ciselect reject <pipeline-name> <stage-name> <action-name> --profile my-aws-profile --region us-west-2 -s "Rejected by ciselect"
-```
 
 ## Required AWS Permissions
 
@@ -91,8 +70,10 @@ go build
 
 ## Safety Features
 
-- **Required AWS Profile**: The tool requires explicit specification of the AWS profile to use, preventing accidental operations on the wrong AWS account.
-- **Required AWS Region**: The tool requires explicit specification of the AWS region, ensuring clarity about where operations are being performed.
-- **Interactive Mode**: Provides clear visibility and confirmation steps for all actions.
-- **Explicit Permissions**: The IAM policy above specifies the exact permissions needed for operation.
-- **Error Handling**: Clear error messages when profile, region, or other required parameters are missing or invalid. 
+- **Interactive Workflow**: Clear step-by-step process prevents accidental operations
+- **Profile Selection**: Choose from available AWS profiles or type custom ones
+- **Region Selection**: Choose from common regions or type custom ones
+- **Confirmation Steps**: Verify your actions before they're executed
+- **Clear Context**: Always shows which profile, region, and pipeline you're working with
+- **Color-Coded UI**: Important information and actions are visually distinct
+- **Error Handling**: Clear error messages when something goes wrong 
