@@ -16,11 +16,75 @@ import (
 )
 
 const (
-	stepFetchingApprovals = iota
+	stepSelectProvider = iota
+	stepProviderConfig
+	stepSelectService
+	stepServiceOperation
 	stepSelectingApproval
 	stepConfirmingAction
+	stepSummaryInput
 	stepExecutingAction
 )
+
+type Provider struct {
+	ID          string
+	Name        string
+	Description string
+	Available   bool
+}
+
+var providers = []Provider{
+	{
+		ID:          "aws",
+		Name:        "Amazon Web Services",
+		Description: "AWS Cloud Services",
+		Available:   true,
+	},
+	{
+		ID:          "azure",
+		Name:        "Microsoft Azure",
+		Description: "Azure Cloud Platform (Coming Soon)",
+		Available:   false,
+	},
+	{
+		ID:          "gcp",
+		Name:        "Google Cloud Platform",
+		Description: "Google Cloud Services (Coming Soon)",
+		Available:   false,
+	},
+}
+
+type Service struct {
+	ID          string
+	Name        string
+	Description string
+	Available   bool
+}
+
+var awsServices = []Service{
+	{
+		ID:          "codepipeline",
+		Name:        "CodePipeline",
+		Description: "Continuous Delivery Service",
+		Available:   true,
+	},
+	// Placeholder for future AWS services
+}
+
+type Operation struct {
+	ID          string
+	Name        string
+	Description string
+}
+
+var codePipelineOperations = []Operation{
+	{
+		ID:          "manual-approval",
+		Name:        "Manual Approval",
+		Description: "Manage manual approval actions",
+	},
+	// Placeholder for future CodePipeline operations
+}
 
 type Styles struct {
 	Title       lipgloss.Style
@@ -28,6 +92,7 @@ type Styles struct {
 	Unselected  lipgloss.Style
 	Instruction lipgloss.Style
 	Error       lipgloss.Style
+	Disabled    lipgloss.Style
 }
 
 func defaultStyles() Styles {
@@ -47,44 +112,54 @@ func defaultStyles() Styles {
 		Error: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FF0000")).
 			Bold(true),
+		Disabled: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#808080")),
 	}
 }
 
 // Model represents the application state
 type Model struct {
-	profiles         []string
-	regions          []string
-	approvals        []aws.ApprovalAction
-	selectedProfile  string
-	selectedRegion   string
-	cursor           int
-	step             int // 0: profile, 1: region, 2: approvals, 3: action
-	err              error
-	awsService       *aws.Service
+	profiles    []string
+	regions     []string
+	approvals   []aws.ApprovalAction
+	cursor      int
+	step        int
+	err         error
+	styles      Styles
+	manualInput bool
+	inputBuffer string
+
+	// Provider selection
+	selectedProvider *Provider
+
+	// AWS specific
+	awsProfile       string
+	awsRegion        string
+	selectedService  *Service // UI service selection
+	awsOperation     *Operation
+	awsClient        *aws.Service // AWS API client
 	selectedApproval *aws.ApprovalAction
 	summary          string
 	action           string // "approve" or "reject"
-	styles           Styles
-	manualInput      bool
-	inputBuffer      string
 }
 
 func initialModel(profile, region string) Model {
 	m := Model{
 		profiles:    getAWSProfiles(),
 		regions:     []string{"us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1"},
-		step:        0,
+		step:        stepSelectProvider,
 		cursor:      0,
 		styles:      defaultStyles(),
 		manualInput: false,
 		inputBuffer: "",
 	}
 
-	// If profile/region provided via flags, skip to approval fetching
+	// If profile/region provided via flags, skip to service selection
 	if profile != "" && region != "" {
-		m.selectedProfile = profile
-		m.selectedRegion = region
-		m.step = stepFetchingApprovals
+		m.awsProfile = profile
+		m.awsRegion = region
+		m.selectedProvider = &providers[0] // AWS
+		m.step = stepSelectService
 	}
 
 	return m
@@ -106,112 +181,156 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down", "j":
 			if !m.manualInput {
 				switch m.step {
-				case 0: // Profile selection
-					if m.cursor < len(m.profiles)-1 {
+				case stepSelectProvider:
+					if m.cursor < len(providers)-1 {
 						m.cursor++
 					}
-				case 1: // Region selection
-					if m.cursor < len(m.regions)-1 {
+				case stepProviderConfig:
+					if m.awsProfile == "" {
+						if m.cursor < len(m.profiles)-1 {
+							m.cursor++
+						}
+					} else {
+						if m.cursor < len(m.regions)-1 {
+							m.cursor++
+						}
+					}
+				case stepSelectService:
+					if m.selectedProvider.ID == "aws" && m.cursor < len(awsServices)-1 {
 						m.cursor++
 					}
-				case 2: // Approval selection
+				case stepServiceOperation:
+					if m.selectedService.ID == "codepipeline" && m.cursor < len(codePipelineOperations)-1 {
+						m.cursor++
+					}
+				case stepSelectingApproval:
 					if m.cursor < len(m.approvals)-1 {
 						m.cursor++
 					}
-				case 3, 5: // Action/Confirmation selection
-					if m.cursor < 1 {
+				case stepConfirmingAction:
+					if m.cursor < 2 { // Three options: Approve, Reject, Cancel
+						m.cursor++
+					}
+				case stepExecutingAction:
+					if m.cursor < 1 { // Two options: Yes, No
 						m.cursor++
 					}
 				}
 			}
 
 		case "tab":
-			if m.step <= 1 { // Only for profile/region selection
+			if m.step == stepProviderConfig {
 				m.manualInput = !m.manualInput
 				m.inputBuffer = ""
 				m.cursor = 0
 			}
 
 		case "enter":
-			if m.manualInput {
-				input := strings.TrimSpace(m.inputBuffer)
-				if input != "" {
-					if m.step == 0 {
-						m.selectedProfile = input
-						m.step++
-					} else if m.step == 1 {
-						m.selectedRegion = input
-						m.step = stepFetchingApprovals
-						return m.initAWS()
-					}
-					m.manualInput = false
-					m.inputBuffer = ""
-				}
-				return m, nil
-			}
 			switch m.step {
-			case 0: // Profile selected
-				m.selectedProfile = m.profiles[m.cursor]
-				m.step++
-				m.cursor = 0
-
-			case 1: // Region selected
-				m.selectedRegion = m.regions[m.cursor]
-				// Initialize AWS service and fetch approvals
-				ctx := context.Background()
-				service, err := aws.NewService(ctx, m.selectedProfile, m.selectedRegion)
-				if err != nil {
-					m.err = err
+			case stepSelectProvider:
+				provider := providers[m.cursor]
+				if !provider.Available {
 					return m, nil
 				}
-				m.awsService = service
-
-				approvals, err := service.ListPendingApprovals(ctx)
-				if err != nil {
-					m.err = err
-					return m, nil
-				}
-				m.approvals = approvals
-				m.step++
+				m.selectedProvider = &provider
+				m.step = stepProviderConfig
 				m.cursor = 0
 
-			case 2: // Approval selected
-				if len(m.approvals) > 0 {
-					m.selectedApproval = &m.approvals[m.cursor]
-					m.step++
+			case stepProviderConfig:
+				if m.selectedProvider.ID == "aws" {
+					if m.awsProfile == "" {
+						if m.manualInput {
+							if m.inputBuffer != "" {
+								m.awsProfile = m.inputBuffer
+								m.inputBuffer = ""
+								m.cursor = 0
+							}
+						} else {
+							if len(m.profiles) > 0 {
+								m.awsProfile = m.profiles[m.cursor]
+								m.cursor = 0
+							}
+						}
+						return m, nil
+					} else if m.awsRegion == "" {
+						if m.manualInput {
+							if m.inputBuffer != "" {
+								m.awsRegion = m.inputBuffer
+								m.inputBuffer = ""
+								m.manualInput = false
+								m.step = stepSelectService
+								m.cursor = 0
+							}
+						} else {
+							if len(m.regions) > 0 {
+								m.awsRegion = m.regions[m.cursor]
+								m.step = stepSelectService
+								m.cursor = 0
+							}
+						}
+						return m, nil
+					}
+				}
+
+			case stepSelectService:
+				if m.selectedProvider.ID == "aws" {
+					service := awsServices[m.cursor]
+					if !service.Available {
+						return m, nil
+					}
+					m.selectedService = &service
+					m.step = stepServiceOperation
 					m.cursor = 0
 				}
 
-			case 3: // Action selection
+			case stepServiceOperation:
+				if m.selectedService.ID == "codepipeline" {
+					operation := codePipelineOperations[m.cursor]
+					m.awsOperation = &operation
+					if operation.ID == "manual-approval" {
+						// Initialize AWS client and fetch approvals
+						return m.initAWS()
+					}
+				}
+
+			case stepSelectingApproval:
+				if len(m.approvals) > 0 {
+					m.selectedApproval = &m.approvals[m.cursor]
+					m.step = stepConfirmingAction
+					m.cursor = 0
+				}
+
+			case stepConfirmingAction:
 				switch m.cursor {
 				case 0: // Approve
 					m.action = "approve"
-					m.step++
+					m.step = stepSummaryInput
 				case 1: // Reject
 					m.action = "reject"
-					m.step++
+					m.step = stepSummaryInput
 				case 2: // Cancel
 					return m, tea.Quit
 				}
 
-			case 4: // Summary input
+			case stepSummaryInput:
 				if m.summary != "" {
-					m.step++
+					m.step = stepExecutingAction
+					m.cursor = 0
 				}
 
-			case 5: // Confirmation
+			case stepExecutingAction:
 				if m.cursor == 0 { // Yes
 					ctx := context.Background()
 					var err error
 					if m.action == "approve" {
-						err = m.awsService.ApproveAction(ctx,
+						err = m.awsClient.ApproveAction(ctx,
 							m.selectedApproval.PipelineName,
 							m.selectedApproval.StageName,
 							m.selectedApproval.ActionName,
 							m.selectedApproval.Token,
 							m.summary)
 					} else {
-						err = m.awsService.RejectAction(ctx,
+						err = m.awsClient.RejectAction(ctx,
 							m.selectedApproval.PipelineName,
 							m.selectedApproval.StageName,
 							m.selectedApproval.ActionName,
@@ -231,14 +350,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "backspace":
 			if m.manualInput && len(m.inputBuffer) > 0 {
 				m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
-			} else if m.step == 4 && len(m.summary) > 0 {
+			} else if m.step == stepSummaryInput && len(m.summary) > 0 {
 				m.summary = m.summary[:len(m.summary)-1]
 			}
 
 		default:
 			if m.manualInput {
 				m.inputBuffer += msg.String()
-			} else if m.step == 4 {
+			} else if m.step == stepSummaryInput {
 				m.summary += msg.String()
 			}
 		}
@@ -255,37 +374,115 @@ func (m Model) View() string {
 	}
 
 	switch m.step {
-	case 0, 1: // Profile or Region selection
-		title := "Select AWS Profile"
-		if m.step == 1 {
-			title = "Select AWS Region"
-			s.WriteString(m.styles.Instruction.Render(fmt.Sprintf("Profile: %s\n", m.selectedProfile)))
-		}
-		s.WriteString(m.styles.Title.Render(title))
+	case stepSelectProvider:
+		s.WriteString(m.styles.Title.Render("Select Cloud Provider"))
+		s.WriteString("\n")
 
-		if m.manualInput {
-			s.WriteString("\nEnter name: ")
-			s.WriteString(m.inputBuffer)
-			s.WriteString("_")
-		} else {
-			items := m.profiles
-			if m.step == 1 {
-				items = m.regions
-			}
-			for i, item := range items {
-				if m.cursor == i {
-					s.WriteString("\n> " + m.styles.Selected.Render(item))
+		for i, provider := range providers {
+			text := fmt.Sprintf("%s - %s", provider.Name, provider.Description)
+
+			if m.cursor == i {
+				if provider.Available {
+					s.WriteString("\n> " + m.styles.Selected.Render(text))
 				} else {
-					s.WriteString("\n  " + item)
+					s.WriteString("\n> " + m.styles.Disabled.Render(text))
+				}
+			} else {
+				if provider.Available {
+					s.WriteString("\n  " + text)
+				} else {
+					s.WriteString("\n  " + m.styles.Disabled.Render(text))
 				}
 			}
 		}
 
-	case 2: // Approval selection
+	case stepProviderConfig:
+		if m.selectedProvider.ID == "aws" {
+			if m.awsProfile == "" {
+				s.WriteString(m.styles.Title.Render("Select AWS Profile"))
+				s.WriteString("\n")
+
+				if m.manualInput {
+					s.WriteString(m.styles.Instruction.Render("Enter AWS Profile: "))
+					s.WriteString(m.inputBuffer)
+				} else {
+					for i, profile := range m.profiles {
+						if m.cursor == i {
+							s.WriteString("\n> " + m.styles.Selected.Render(profile))
+						} else {
+							s.WriteString("\n  " + profile)
+						}
+					}
+				}
+			} else {
+				s.WriteString(m.styles.Title.Render("Select AWS Region"))
+				s.WriteString("\n")
+				s.WriteString(m.styles.Instruction.Render(fmt.Sprintf("Profile: %s", m.awsProfile)))
+				s.WriteString("\n")
+
+				if m.manualInput {
+					s.WriteString(m.styles.Instruction.Render("Enter AWS Region: "))
+					s.WriteString(m.inputBuffer)
+				} else {
+					for i, region := range m.regions {
+						if m.cursor == i {
+							s.WriteString("\n> " + m.styles.Selected.Render(region))
+						} else {
+							s.WriteString("\n  " + region)
+						}
+					}
+				}
+			}
+		}
+
+	case stepSelectService:
+		if m.selectedProvider.ID == "aws" {
+			s.WriteString(m.styles.Title.Render("Select AWS Service"))
+			s.WriteString("\n")
+			s.WriteString(m.styles.Instruction.Render(fmt.Sprintf("Profile: %s | Region: %s",
+				m.awsProfile, m.awsRegion)))
+
+			for i, service := range awsServices {
+				text := fmt.Sprintf("%s - %s", service.Name, service.Description)
+
+				if m.cursor == i {
+					if service.Available {
+						s.WriteString("\n> " + m.styles.Selected.Render(text))
+					} else {
+						s.WriteString("\n> " + m.styles.Disabled.Render(text))
+					}
+				} else {
+					if service.Available {
+						s.WriteString("\n  " + text)
+					} else {
+						s.WriteString("\n  " + m.styles.Disabled.Render(text))
+					}
+				}
+			}
+		}
+
+	case stepServiceOperation:
+		if m.selectedService.ID == "codepipeline" {
+			s.WriteString(m.styles.Title.Render("Select Operation"))
+			s.WriteString("\n")
+			s.WriteString(m.styles.Instruction.Render(fmt.Sprintf("Service: %s", m.selectedService.Name)))
+
+			for i, operation := range codePipelineOperations {
+				text := fmt.Sprintf("%s - %s", operation.Name, operation.Description)
+
+				if m.cursor == i {
+					s.WriteString("\n> " + m.styles.Selected.Render(text))
+				} else {
+					s.WriteString("\n  " + text)
+				}
+			}
+		}
+
+	case stepSelectingApproval:
 		s.WriteString(m.styles.Title.Render("Select Approval"))
 		s.WriteString("\n")
 		s.WriteString(m.styles.Instruction.Render(fmt.Sprintf("Profile: %s | Region: %s",
-			m.selectedProfile, m.selectedRegion)))
+			m.awsProfile, m.awsRegion)))
 
 		if len(m.approvals) == 0 {
 			s.WriteString("\n\n")
@@ -307,7 +504,7 @@ func (m Model) View() string {
 			}
 		}
 
-	case 3: // Action selection
+	case stepConfirmingAction:
 		s.WriteString(m.styles.Title.Render("Choose Action"))
 		s.WriteString("\n")
 		s.WriteString(m.styles.Instruction.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
@@ -324,7 +521,7 @@ func (m Model) View() string {
 			}
 		}
 
-	case 4: // Summary input
+	case stepSummaryInput:
 		s.WriteString(m.styles.Title.Render("Enter Summary"))
 		s.WriteString("\n")
 		s.WriteString(m.styles.Instruction.Render(fmt.Sprintf("Action: %s", m.action)))
@@ -332,7 +529,7 @@ func (m Model) View() string {
 		s.WriteString(m.summary)
 		s.WriteString("_")
 
-	case 5: // Confirmation
+	case stepExecutingAction:
 		s.WriteString(m.styles.Title.Render("Confirm Action"))
 		s.WriteString("\n")
 		s.WriteString(m.styles.Instruction.Render(fmt.Sprintf(`Pipeline: %s
@@ -450,18 +647,19 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) initAWS() (Model, tea.Cmd) {
 	ctx := context.Background()
-	service, err := aws.NewService(ctx, m.selectedProfile, m.selectedRegion)
+	client, err := aws.NewService(ctx, m.awsProfile, m.awsRegion)
 	if err != nil {
 		m.err = err
 		return m, nil
 	}
-	m.awsService = service
+	m.awsClient = client
 
-	approvals, err := service.ListPendingApprovals(ctx)
+	approvals, err := client.ListPendingApprovals(ctx)
 	if err != nil {
 		m.err = err
 		return m, nil
 	}
 	m.approvals = approvals
+	m.step = stepSelectingApproval
 	return m, nil
 }
