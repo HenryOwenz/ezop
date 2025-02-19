@@ -9,16 +9,16 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "ciselect",
-	Short: "Interactive CLI tool for managing AWS CodePipeline approvals",
-	Long: `ciselect is an interactive terminal UI for managing AWS CodePipeline manual approvals.
+	Use:   "ezop",
+	Short: "Interactive CLI tool for managing cloud operations",
+	Long: `ezop is an interactive terminal UI for managing cloud operations across multiple providers.
 It provides a beautiful, user-friendly interface to:
 
-- Select from available AWS profiles or type your own
-- Choose from common regions or type a custom one
-- View and select pending approvals in a clear, formatted list
-- Approve or reject actions with guided prompts
-- Confirm actions with clear context
+- Select from multiple cloud providers (AWS, Azure, GCP)
+- Choose from available services for each provider
+- Execute operations with guided prompts
+- Approve or reject actions with clear context
+- Confirm actions with safety checks
 - Get immediate feedback with color-coded status updates`,
 	Run: func(cmd *cobra.Command, args []string) {
 		p := tea.NewProgram(initialModel("", ""))
@@ -34,31 +34,31 @@ func init() {
 	completionCmd := &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate shell completion scripts",
-		Long: `Generate shell completion scripts for ciselect.
+		Long: `Generate shell completion scripts for ezop.
 		
 To load completions:
 
 Bash:
   # Linux:
-  $ ciselect completion bash > /etc/bash_completion.d/ciselect
+  $ ezop completion bash > /etc/bash_completion.d/ezop
   
   # macOS (requires bash-completion):
-  $ ciselect completion bash > $(brew --prefix)/etc/bash_completion.d/ciselect
+  $ ezop completion bash > $(brew --prefix)/etc/bash_completion.d/ezop
 
 Zsh:
   # If shell completion is not already enabled in your environment:
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
   
-  # Load the ciselect completion code:
-  $ ciselect completion zsh > "${fpath[1]}/_ciselect"
+  # Load the ezop completion code:
+  $ ezop completion zsh > "${fpath[1]}/_ezop"
 
 Fish:
-  $ ciselect completion fish > ~/.config/fish/completions/ciselect.fish
+  $ ezop completion fish > ~/.config/fish/completions/ezop.fish
 
 PowerShell:
-  PS> ciselect completion powershell | Out-String | Invoke-Expression
+  PS> ezop completion powershell | Out-String | Invoke-Expression
   # To load completions for every new session, run:
-  PS> ciselect completion powershell > ciselect.ps1
+  PS> ezop completion powershell > ezop.ps1
   # and source this file from your PowerShell profile.`,
 		DisableFlagsInUseLine: true,
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},

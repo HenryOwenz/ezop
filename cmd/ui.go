@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/HenryOwenz/ciselect/internal/aws"
+	"github.com/HenryOwenz/ezop/internal/aws"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"

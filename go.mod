@@ -1,4 +1,4 @@
-module github.com/HenryOwenz/ciselect
+module github.com/HenryOwenz/ezop
 
 go 1.21
 

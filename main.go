@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/HenryOwenz/ciselect/cmd"
+	"github.com/HenryOwenz/ezop/cmd"
 )
 
 func main() {

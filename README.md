@@ -1,44 +1,55 @@
-# ciselect
+# ezop
 
-A user-friendly interactive CLI tool for managing AWS CodePipeline manual approvals.
+A user-friendly interactive CLI tool for managing cloud operations across multiple providers.
 
 ## Installation
 
 ```bash
-go install github.com/HenryOwenz/ciselect@latest
+go install github.com/HenryOwenz/ezop@latest
 ```
 
 ## Prerequisites
 
-- AWS credentials configured in your AWS config/credentials files
-- Appropriate IAM permissions for AWS CodePipeline operations
+- Cloud provider credentials configured appropriately
+- For AWS: AWS credentials configured in your AWS config/credentials files
+- For Azure: Coming soon
+- For GCP: Coming soon
 
 ## Usage
 
 Simply run:
 ```bash
-ciselect
+ezop
 ```
 
 The interactive interface will guide you through:
-1. Selecting an AWS profile (from your configured profiles or type a custom one)
-2. Choosing an AWS region (from common regions or type a custom one)
-3. Managing your pipeline approvals with a beautiful terminal UI
+1. Selecting your cloud provider
+2. Choosing the service and operation
+3. Configuring provider-specific settings
+4. Managing your cloud operations with a beautiful terminal UI
 
 ## Features
 
 The interactive interface provides:
 - Beautiful terminal UI with color-coded elements
-- List of available AWS profiles with ability to type custom ones
-- List of AWS regions with ability to type custom ones
-- Clear, formatted table of pending approvals
-- Interactive selection and management of approvals
-- Guided approve/reject workflow
+- Multi-cloud provider support
+  - AWS (Available)
+  - Azure (Coming Soon)
+  - GCP (Coming Soon)
+- Provider-specific features:
+  - AWS:
+    - CodePipeline manual approval management
+    - More services coming soon
+  - Azure: Coming soon
+  - GCP: Coming soon
+- Interactive selection and management
+- Guided workflow with clear steps
 - Confirmation steps for safety
 
-## Required AWS Permissions
+## Required Permissions
 
-The following IAM permissions are required:
+### AWS
+For AWS CodePipeline operations, the following IAM permissions are required:
 
 ```json
 {
@@ -58,22 +69,29 @@ The following IAM permissions are required:
 }
 ```
 
+### Azure
+Coming soon
+
+### GCP
+Coming soon
+
 ## Development
 
 To build from source:
 
 ```bash
-git clone https://github.com/HenryOwenz/ciselect.git
-cd ciselect
+git clone https://github.com/HenryOwenz/ezop.git
+cd ezop
 go build
 ```
 
 ## Safety Features
 
-- **Interactive Workflow**: Clear step-by-step process prevents accidental operations
-- **Profile Selection**: Choose from available AWS profiles or type custom ones
-- **Region Selection**: Choose from common regions or type custom ones
+- **Multi-step Workflow**: Clear step-by-step process prevents accidental operations
+- **Provider Selection**: Choose from available cloud providers
+- **Service Selection**: Select from available services for each provider
+- **Operation Selection**: Choose specific operations within each service
 - **Confirmation Steps**: Verify your actions before they're executed
-- **Clear Context**: Always shows which profile, region, and pipeline you're working with
+- **Clear Context**: Always shows which provider, service, and operation you're working with
 - **Color-Coded UI**: Important information and actions are visually distinct
 - **Error Handling**: Clear error messages when something goes wrong 
