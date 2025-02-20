@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/HenryOwenz/ezop/internal/providers/aws"
 	"github.com/HenryOwenz/ezop/internal/ui/model"
@@ -54,6 +55,10 @@ func handleKeyPress(m model.Model, msg tea.KeyMsg) (model.Model, tea.Cmd) {
 				}
 			case model.StepSelectService:
 				if m.Cursor < len(m.Services)-1 {
+					m.Cursor++
+				}
+			case model.StepSelectCategory:
+				if m.Cursor < len(m.Categories)-1 {
 					m.Cursor++
 				}
 			case model.StepServiceOperation:
@@ -166,8 +171,23 @@ func handleEnterPress(m model.Model) (model.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.SelectedService = &service
-		m.Operations = m.AWSProvider.GetOperations(service.ID)
-		m.Step = model.StepServiceOperation
+		m.Step = model.StepSelectCategory
+		m.Cursor = 0
+
+	case model.StepSelectCategory:
+		category := m.Categories[m.Cursor]
+		if !category.Available {
+			return m, nil
+		}
+		m.SelectedCategory = &category
+
+		if category.ID == "workflows" {
+			m.Operations = m.AWSProvider.GetOperations(m.SelectedService.ID)
+			m.Step = model.StepServiceOperation
+		} else {
+			// Operations mode not implemented yet
+			m.Error = fmt.Errorf("direct operations mode not yet implemented")
+		}
 		m.Cursor = 0
 
 	case model.StepServiceOperation:

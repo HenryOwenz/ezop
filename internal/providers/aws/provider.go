@@ -27,7 +27,7 @@ var awsServices = []domain.Service{
 	{
 		ID:          "codepipeline",
 		Name:        "CodePipeline",
-		Description: "Continuous Delivery Service",
+		Description: "CI/CD Service",
 		Available:   true,
 	},
 	// Placeholder for future AWS services
@@ -38,7 +38,7 @@ var codePipelineOperations = []domain.Operation{
 	{
 		ID:          "manual-approval",
 		Name:        "Manual Approval",
-		Description: "Manage manual approval actions",
+		Description: "Pipeline approval actions",
 	},
 	// Placeholder for future CodePipeline operations
 }

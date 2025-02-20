@@ -19,12 +19,21 @@ const (
 	StepSelectProvider Step = iota
 	StepProviderConfig
 	StepSelectService
+	StepSelectCategory // New step for selecting between workflows and operations
 	StepServiceOperation
 	StepSelectingApproval
 	StepConfirmingAction
 	StepSummaryInput
 	StepExecutingAction
 )
+
+// Category represents a group of service functionality
+type Category struct {
+	ID          string
+	Name        string
+	Description string
+	Available   bool
+}
 
 // Model represents the application state
 type Model struct {
@@ -45,6 +54,8 @@ type Model struct {
 	// Service selection
 	Services          []domain.Service
 	SelectedService   *domain.Service
+	Categories        []Category // New field for workflow/operations categories
+	SelectedCategory  *Category  // New field for selected category
 	Operations        []domain.Operation
 	SelectedOperation *domain.Operation
 
@@ -68,6 +79,20 @@ func NewModel() Model {
 		ManualInput: false,
 		InputBuffer: "",
 		Providers:   domain.DefaultProviders,
+		Categories: []Category{
+			{
+				ID:          "workflows",
+				Name:        "Workflows",
+				Description: "Curated workflows for common tasks",
+				Available:   true,
+			},
+			{
+				ID:          "operations",
+				Name:        "Operations",
+				Description: "Direct AWS service operations",
+				Available:   false, // Not implemented yet
+			},
+		},
 	}
 }
 
@@ -146,9 +171,13 @@ func (m *Model) NavigateBack() {
 		m.Services = nil
 		m.AWSProvider = nil
 		m.Cursor = 0
-	case StepServiceOperation:
+	case StepSelectCategory:
 		m.Step = StepSelectService
-		m.SelectedService = nil
+		m.SelectedCategory = nil
+		m.Cursor = 0
+	case StepServiceOperation:
+		m.Step = StepSelectCategory
+		m.SelectedOperation = nil
 		m.Operations = nil
 		m.Cursor = 0
 	case StepSelectingApproval:

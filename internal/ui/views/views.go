@@ -105,9 +105,33 @@ func View(m model.Model) string {
 			}
 		}
 
+	case model.StepSelectCategory:
+		s.WriteString(m.Styles.Title.Render("Select Category"))
+		s.WriteString("\n")
+		s.WriteString(m.Styles.Instruction.Render(fmt.Sprintf("Service: %s", m.SelectedService.Name)))
+		s.WriteString("\n")
+
+		for i, category := range m.Categories {
+			text := fmt.Sprintf("%s - %s", category.Name, category.Description)
+
+			if m.Cursor == i {
+				if category.Available {
+					s.WriteString("\n> " + m.Styles.Selected.Render(text))
+				} else {
+					s.WriteString("\n> " + m.Styles.Disabled.Render(text))
+				}
+			} else {
+				if category.Available {
+					s.WriteString("\n  " + text)
+				} else {
+					s.WriteString("\n  " + m.Styles.Disabled.Render(text))
+				}
+			}
+		}
+
 	case model.StepServiceOperation:
 		if m.SelectedService.ID == "codepipeline" {
-			s.WriteString(m.Styles.Title.Render("Select Operation"))
+			s.WriteString(m.Styles.Title.Render("Select Workflow"))
 			s.WriteString("\n")
 			s.WriteString(m.Styles.Instruction.Render(fmt.Sprintf("Service: %s", m.SelectedService.Name)))
 			s.WriteString("\n")
