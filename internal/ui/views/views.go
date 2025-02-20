@@ -208,7 +208,7 @@ func View(m model.Model) string {
 	if m.Step <= 1 {
 		s.WriteString(m.Styles.Instruction.Render("↑/↓: Navigate • Enter: Select • Tab: Toggle Input Mode • q: Quit"))
 	} else {
-		s.WriteString(m.Styles.Instruction.Render("↑/↓: Navigate • Enter: Select • q: Quit"))
+		s.WriteString(m.Styles.Instruction.Render("↑/↓: Navigate • Enter: Select • -: Back • q: Quit"))
 	}
 
 	return s.String()

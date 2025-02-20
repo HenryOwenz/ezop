@@ -121,3 +121,52 @@ func contains(slice []string, item string) bool {
 	}
 	return false
 }
+
+// NavigateBack moves to the previous step in the workflow
+func (m *Model) NavigateBack() {
+	switch m.Step {
+	case StepProviderConfig:
+		if m.AWSRegion != "" {
+			// If we have a region, clear it and stay in provider config to select region
+			m.AWSRegion = ""
+			m.Cursor = 0
+		} else if m.AWSProfile != "" {
+			// If we have a profile but no region, clear profile to select profile
+			m.AWSProfile = ""
+			m.Cursor = 0
+		} else {
+			// If we have neither, go back to provider selection
+			m.Step = StepSelectProvider
+			m.SelectedProvider = nil
+			m.Cursor = 0
+		}
+	case StepSelectService:
+		m.Step = StepProviderConfig
+		m.AWSRegion = "" // Clear region but keep profile
+		m.Services = nil
+		m.AWSProvider = nil
+		m.Cursor = 0
+	case StepServiceOperation:
+		m.Step = StepSelectService
+		m.SelectedService = nil
+		m.Operations = nil
+		m.Cursor = 0
+	case StepSelectingApproval:
+		m.Step = StepServiceOperation
+		m.SelectedOperation = nil
+		m.Approvals = nil
+		m.Cursor = 0
+	case StepConfirmingAction:
+		m.Step = StepSelectingApproval
+		m.SelectedApproval = nil
+		m.Cursor = 0
+	case StepSummaryInput:
+		m.Step = StepConfirmingAction
+		m.Summary = ""
+		m.Action = ""
+		m.Cursor = 0
+	case StepExecutingAction:
+		m.Step = StepSummaryInput
+		m.Cursor = 0
+	}
+}

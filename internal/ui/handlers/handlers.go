@@ -24,6 +24,12 @@ func handleKeyPress(m model.Model, msg tea.KeyMsg) (model.Model, tea.Cmd) {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 
+	case "-":
+		if m.Step > model.StepSelectProvider {
+			m.NavigateBack()
+		}
+		return m, nil
+
 	case "up", "k":
 		if !m.ManualInput && m.Cursor > 0 {
 			m.Cursor--
