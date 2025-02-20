@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/HenryOwenz/ezop/internal/domain"
 	"github.com/HenryOwenz/ezop/internal/providers/aws"
 	"github.com/HenryOwenz/ezop/internal/ui/model"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,18 +14,63 @@ import (
 func Update(m model.Model, msg tea.Msg) (model.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return handleKeyPress(m, msg)
+		if msg.String() == "ctrl+c" || msg.String() == "q" {
+			return m, tea.Quit
+		}
+		m, cmd := handleKeyPress(m, msg)
+		if m.IsLoading {
+			var spinnerCmd tea.Cmd
+			m.Spinner, spinnerCmd = m.Spinner.Update(msg)
+			return m, tea.Batch(cmd, spinnerCmd)
+		}
+		return m, cmd
+
+	case error:
+		m.Error = msg
+		m.IsLoading = false
+		return m, nil
+
+	case awsProviderMsg:
+		m.Services = msg.services
+		m.AWSProvider = msg.provider
+		m.Step = model.StepSelectService
+		return m, nil
+
+	case approvalsMsg:
+		m.Approvals = msg.approvals
+		m.Step = model.StepSelectingApproval
+		m.IsLoading = false
+		return m, nil
+
+	case actionCompleteMsg:
+		m.IsLoading = false
+		return m, tea.Quit
+
 	default:
+		var cmd tea.Cmd
+		if m.IsLoading {
+			m.Spinner, cmd = m.Spinner.Update(msg)
+			return m, cmd
+		}
 		return m, nil
 	}
 }
 
+// Custom message types for handling async operations
+type awsProviderMsg struct {
+	provider *aws.Provider
+	services []domain.Service
+}
+
+type approvalsMsg struct {
+	approvals []aws.ApprovalAction
+}
+
+type actionCompleteMsg struct{}
+
 // handleKeyPress handles keyboard input events
 func handleKeyPress(m model.Model, msg tea.KeyMsg) (model.Model, tea.Cmd) {
 	switch msg.String() {
-	case "ctrl+c", "q":
-		return m, tea.Quit
-
 	case "-":
 		if m.Step > model.StepSelectProvider {
 			m.NavigateBack()
@@ -160,6 +206,8 @@ func handleEnterPress(m model.Model) (model.Model, tea.Cmd) {
 					}
 					m.Services = provider.GetServices()
 					m.AWSProvider = provider
+					m.Step = model.StepSelectService
+					return m, nil
 				}
 				return m, nil
 			}
@@ -194,7 +242,18 @@ func handleEnterPress(m model.Model) (model.Model, tea.Cmd) {
 		operation := m.Operations[m.Cursor]
 		m.SelectedOperation = &operation
 		if operation.ID == "manual-approval" {
-			return initApprovals(m)
+			m.Step = model.StepSelectingApproval
+			m.IsLoading = true
+			return m, tea.Batch(
+				m.Spinner.Tick,
+				func() tea.Msg {
+					approvals, err := m.AWSProvider.GetPendingApprovals(context.Background())
+					if err != nil {
+						return err
+					}
+					return approvalsMsg{approvals: approvals}
+				},
+			)
 		}
 
 	case model.StepSelectingApproval:
@@ -224,43 +283,33 @@ func handleEnterPress(m model.Model) (model.Model, tea.Cmd) {
 
 	case model.StepExecutingAction:
 		if m.Cursor == 0 { // Yes
-			return executeAction(m)
+			m.IsLoading = true
+			return m, tea.Batch(
+				m.Spinner.Tick,
+				func() tea.Msg {
+					params := map[string]interface{}{
+						"pipeline_name": m.SelectedApproval.PipelineName,
+						"stage_name":    m.SelectedApproval.StageName,
+						"action_name":   m.SelectedApproval.ActionName,
+						"token":         m.SelectedApproval.Token,
+						"summary":       m.Summary,
+						"approve":       m.Action == "approve",
+					}
+
+					err := m.AWSProvider.ExecuteOperation(context.Background(),
+						m.SelectedService.ID,
+						m.SelectedOperation.ID,
+						params)
+
+					if err != nil {
+						return err
+					}
+					return actionCompleteMsg{}
+				},
+			)
 		}
 		return m, tea.Quit // No
 	}
 
 	return m, nil
-}
-
-func initApprovals(m model.Model) (model.Model, tea.Cmd) {
-	approvals, err := m.AWSProvider.GetPendingApprovals(context.Background())
-	if err != nil {
-		m.Error = err
-		return m, nil
-	}
-	m.Approvals = approvals
-	m.Step = model.StepSelectingApproval
-	return m, nil
-}
-
-func executeAction(m model.Model) (model.Model, tea.Cmd) {
-	params := map[string]interface{}{
-		"pipeline_name": m.SelectedApproval.PipelineName,
-		"stage_name":    m.SelectedApproval.StageName,
-		"action_name":   m.SelectedApproval.ActionName,
-		"token":         m.SelectedApproval.Token,
-		"summary":       m.Summary,
-		"approve":       m.Action == "approve",
-	}
-
-	err := m.AWSProvider.ExecuteOperation(context.Background(),
-		m.SelectedService.ID,
-		m.SelectedOperation.ID,
-		params)
-
-	if err != nil {
-		m.Error = err
-		return m, nil
-	}
-	return m, tea.Quit
 }

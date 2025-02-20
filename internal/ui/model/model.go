@@ -10,6 +10,7 @@ import (
 	"github.com/HenryOwenz/ezop/internal/domain"
 	"github.com/HenryOwenz/ezop/internal/providers/aws"
 	"github.com/HenryOwenz/ezop/internal/ui/styles"
+	"github.com/charmbracelet/bubbles/spinner"
 )
 
 // Step represents the current step in the UI workflow
@@ -46,6 +47,9 @@ type Model struct {
 	Styles      styles.Styles
 	ManualInput bool
 	InputBuffer string
+	IsLoading   bool          // Indicates if an API request is in progress
+	LoadingMsg  string        // Custom loading message for different operations
+	Spinner     spinner.Model // Spinner component for loading states
 
 	// Provider selection
 	SelectedProvider *domain.Provider
@@ -70,6 +74,10 @@ type Model struct {
 
 // NewModel creates a new Model with initial state
 func NewModel() Model {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = styles.DefaultStyles().Loading
+
 	return Model{
 		Profiles:    getAWSProfiles(),
 		Regions:     []string{"us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1"},
@@ -78,6 +86,7 @@ func NewModel() Model {
 		Styles:      styles.DefaultStyles(),
 		ManualInput: false,
 		InputBuffer: "",
+		Spinner:     s,
 		Providers:   domain.DefaultProviders,
 		Categories: []Category{
 			{

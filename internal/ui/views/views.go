@@ -15,6 +15,11 @@ func View(m model.Model) string {
 		return m.Styles.Error.Render(fmt.Sprintf("Error: %v", m.Error))
 	}
 
+	if m.IsLoading {
+		s.WriteString(m.Spinner.View())
+		s.WriteString("\n\n")
+	}
+
 	switch m.Step {
 	case model.StepSelectProvider:
 		s.WriteString(m.Styles.Title.Render("Select Cloud Provider"))

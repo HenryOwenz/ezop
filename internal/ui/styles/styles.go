@@ -10,6 +10,7 @@ type Styles struct {
 	Instruction lipgloss.Style
 	Error       lipgloss.Style
 	Disabled    lipgloss.Style
+	Loading     lipgloss.Style
 }
 
 // DefaultStyles returns the default styling configuration
@@ -32,5 +33,8 @@ func DefaultStyles() Styles {
 			Bold(true),
 		Disabled: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#808080")),
+		Loading: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFF00")).
+			Italic(true),
 	}
 }
