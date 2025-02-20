@@ -5,7 +5,7 @@ A user-friendly interactive CLI tool for managing cloud operations across multip
 ## Installation
 
 ```bash
-go install github.com/HenryOwenz/ezop@latest
+# Coming soon. For now you can git clone and build the go project locally.
 ```
 
 ## Prerequisites
