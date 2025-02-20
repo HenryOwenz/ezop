@@ -86,19 +86,17 @@ func View(m model.Model) string {
 			s.WriteString("\n")
 
 			for i, service := range m.Services {
-				text := fmt.Sprintf("%s - %s", service.Name, service.Description)
-
 				if m.Cursor == i {
 					if service.Available {
-						s.WriteString("\n> " + m.Styles.Selected.Render(text))
+						s.WriteString("\n> " + m.Styles.Selected.Render(service.Name))
 					} else {
-						s.WriteString("\n> " + m.Styles.Disabled.Render(text))
+						s.WriteString("\n> " + m.Styles.Disabled.Render(service.Name))
 					}
 				} else {
 					if service.Available {
-						s.WriteString("\n  " + text)
+						s.WriteString("\n  " + service.Name)
 					} else {
-						s.WriteString("\n  " + m.Styles.Disabled.Render(text))
+						s.WriteString("\n  " + m.Styles.Disabled.Render(service.Name))
 					}
 				}
 				s.WriteString("\n")
