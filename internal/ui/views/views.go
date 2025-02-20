@@ -83,6 +83,7 @@ func View(m model.Model) string {
 			s.WriteString("\n")
 			s.WriteString(m.Styles.Instruction.Render(fmt.Sprintf("Profile: %s | Region: %s",
 				m.AWSProfile, m.AWSRegion)))
+			s.WriteString("\n")
 
 			for i, service := range m.Services {
 				text := fmt.Sprintf("%s - %s", service.Name, service.Description)
@@ -100,6 +101,7 @@ func View(m model.Model) string {
 						s.WriteString("\n  " + m.Styles.Disabled.Render(text))
 					}
 				}
+				s.WriteString("\n")
 			}
 		}
 
@@ -108,6 +110,7 @@ func View(m model.Model) string {
 			s.WriteString(m.Styles.Title.Render("Select Operation"))
 			s.WriteString("\n")
 			s.WriteString(m.Styles.Instruction.Render(fmt.Sprintf("Service: %s", m.SelectedService.Name)))
+			s.WriteString("\n")
 
 			for i, operation := range m.Operations {
 				text := fmt.Sprintf("%s - %s", operation.Name, operation.Description)
@@ -117,6 +120,7 @@ func View(m model.Model) string {
 				} else {
 					s.WriteString("\n  " + text)
 				}
+				s.WriteString("\n")
 			}
 		}
 
@@ -125,6 +129,7 @@ func View(m model.Model) string {
 		s.WriteString("\n")
 		s.WriteString(m.Styles.Instruction.Render(fmt.Sprintf("Profile: %s | Region: %s",
 			m.AWSProfile, m.AWSRegion)))
+		s.WriteString("\n")
 
 		if len(m.Approvals) == 0 {
 			s.WriteString("\n\n")
@@ -144,23 +149,27 @@ func View(m model.Model) string {
 			} else {
 				s.WriteString("\n  " + text)
 			}
+			s.WriteString("\n")
 		}
 
 	case model.StepConfirmingAction:
 		s.WriteString(m.Styles.Title.Render("Choose Action"))
 		s.WriteString("\n")
-		s.WriteString(m.Styles.Instruction.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
-			m.SelectedApproval.PipelineName,
-			m.SelectedApproval.StageName,
-			m.SelectedApproval.ActionName)))
+		s.WriteString(fmt.Sprintf("%s%s\n%s%s\n%s%s",
+			m.Styles.Instruction.Render("Pipeline: "), m.SelectedApproval.PipelineName,
+			m.Styles.Instruction.Render("Stage: "), m.SelectedApproval.StageName,
+			m.Styles.Instruction.Render("Action: "), m.SelectedApproval.ActionName))
+		s.WriteString("\n")
 
 		options := []string{"Approve", "Reject", "Cancel"}
+		s.WriteString("\n")
 		for i, option := range options {
 			if m.Cursor == i {
-				s.WriteString("\n> " + m.Styles.Selected.Render(option))
+				s.WriteString("> " + m.Styles.Selected.Render(option))
 			} else {
-				s.WriteString("\n  " + option)
+				s.WriteString("  " + option)
 			}
+			s.WriteString("\n")
 		}
 
 	case model.StepSummaryInput:
@@ -174,26 +183,23 @@ func View(m model.Model) string {
 	case model.StepExecutingAction:
 		s.WriteString(m.Styles.Title.Render("Confirm Action"))
 		s.WriteString("\n")
-		s.WriteString(m.Styles.Instruction.Render(fmt.Sprintf(`Pipeline: %s
-Stage: %s
-Action: %s
-Operation: %s
-Summary: %s
-
-Are you sure?`,
-			m.SelectedApproval.PipelineName,
-			m.SelectedApproval.StageName,
-			m.SelectedApproval.ActionName,
-			m.Action,
-			m.Summary)))
+		s.WriteString(fmt.Sprintf("%s%s\n%s%s\n%s%s\n%s%s\n%s%s\n\n%s",
+			m.Styles.Instruction.Render("Pipeline: "), m.SelectedApproval.PipelineName,
+			m.Styles.Instruction.Render("Stage: "), m.SelectedApproval.StageName,
+			m.Styles.Instruction.Render("Action: "), m.SelectedApproval.ActionName,
+			m.Styles.Instruction.Render("Operation: "), m.Action,
+			m.Styles.Instruction.Render("Summary: "), m.Summary,
+			m.Styles.Instruction.Render("Are you sure?")))
 
 		options := []string{"Yes", "No"}
+		s.WriteString("\n")
 		for i, option := range options {
 			if m.Cursor == i {
-				s.WriteString("\n> " + m.Styles.Selected.Render(option))
+				s.WriteString("> " + m.Styles.Selected.Render(option))
 			} else {
-				s.WriteString("\n  " + option)
+				s.WriteString("  " + option)
 			}
+			s.WriteString("\n")
 		}
 	}
 
