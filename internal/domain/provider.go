@@ -18,6 +18,14 @@ type Service struct {
 	Available   bool
 }
 
+// Category represents a group of related operations within a service
+type Category struct {
+	ID          string
+	Name        string
+	Description string
+	Available   bool
+}
+
 // Operation represents an action that can be performed on a service
 type Operation struct {
 	ID          string
@@ -53,13 +61,13 @@ var DefaultProviders = []Provider{
 	{
 		ID:          "azure",
 		Name:        "Microsoft Azure",
-		Description: "Azure Cloud Platform (Coming Soon)",
+		Description: "Azure Cloud Platform",
 		Available:   false,
 	},
 	{
 		ID:          "gcp",
 		Name:        "Google Cloud Platform",
-		Description: "Google Cloud Services (Coming Soon)",
+		Description: "Google Cloud Services",
 		Available:   false,
 	},
 }
