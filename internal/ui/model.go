@@ -247,168 +247,150 @@ func (m Model) View() string {
 		)
 	}
 
+	var content []string
+
+	// Add title and context based on current view
 	switch m.currentView {
 	case ViewProviders:
-		return m.styles.App.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				m.styles.Title.Render("Select Cloud Provider"),
-				"\n",
-				m.table.View(),
-				"\n",
-				m.styles.Help.Render("↑/↓: navigate • enter: select • q: quit"),
-			),
-		)
+		content = []string{
+			m.styles.Title.Render("Select Cloud Provider"),
+			m.styles.Context.Render("A simple tool to manage your cloud resources"),
+			"",
+			"",
+			"", // Empty line for help text
+		}
 	case ViewAWSConfig:
-		var content string
 		if m.awsProfile == "" {
-			content = lipgloss.JoinVertical(
-				lipgloss.Left,
+			content = []string{
 				m.styles.Title.Render("Select AWS Profile"),
-				"\n",
-				m.table.View(),
-				"\n",
-				m.styles.Help.Render("↑/↓: navigate • enter: select • tab: toggle input • -: back • q: quit"),
-			)
+				m.styles.Context.Render("Amazon Web Services"),
+				"",
+				"",
+				"", // Empty line for help text
+			}
 		} else {
-			content = lipgloss.JoinVertical(
-				lipgloss.Left,
+			content = []string{
 				m.styles.Title.Render("Select AWS Region"),
-				m.styles.Context.Render("Profile: "+m.awsProfile),
-				"\n",
-				m.table.View(),
-				"\n",
-				m.styles.Help.Render("↑/↓: navigate • enter: select • tab: toggle input • -: back • q: quit"),
-			)
+				m.styles.Context.Render(fmt.Sprintf("Profile: %s", m.awsProfile)),
+				"",
+				"",
+				"", // Empty line for help text
+			}
 		}
-
-		if m.manualInput {
-			content = lipgloss.JoinVertical(
-				lipgloss.Left,
-				content,
-				"\n",
-				"Enter value: "+m.inputBuffer+"_",
-			)
-		}
-
-		return m.styles.App.Render(content)
 	case ViewSelectService:
-		return m.styles.App.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				m.styles.Title.Render("Select AWS Service"),
-				m.styles.Context.Render("Profile: "+m.awsProfile+" | Region: "+m.awsRegion),
-				"\n",
-				m.table.View(),
-				"\n",
-				m.styles.Help.Render("↑/↓: navigate • enter: select • -: back • q: quit"),
-			),
-		)
+		content = []string{
+			m.styles.Title.Render("Select AWS Service"),
+			m.styles.Context.Render(fmt.Sprintf("Profile: %s\nRegion: %s",
+				m.awsProfile,
+				m.awsRegion)),
+			"",
+			"",
+			"", // Empty line for help text
+		}
 	case ViewSelectCategory:
-		return m.styles.App.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				m.styles.Title.Render("Select Category"),
-				m.styles.Context.Render(fmt.Sprintf("Service: %s", m.selectedService.Name)),
-				"\n",
-				m.table.View(),
-				"\n",
-				m.styles.Help.Render("↑/↓: navigate • enter: select • -: back • q: quit"),
-			),
-		)
+		content = []string{
+			m.styles.Title.Render("Select Category"),
+			m.styles.Context.Render(fmt.Sprintf("Service: %s",
+				m.selectedService.Name)),
+			"",
+			"",
+			"", // Empty line for help text
+		}
 	case ViewSelectOperation:
-		var content []string
-		content = append(content, m.styles.Title.Render("Select Operation"))
-		if m.isLoading {
-			content = append(content, m.spinner.View())
-		} else {
-			content = append(content, "")
+		content = []string{
+			m.styles.Title.Render("Select Operation"),
+			m.styles.Context.Render(fmt.Sprintf("Service: %s\nCategory: %s",
+				m.selectedService.Name,
+				m.selectedCategory.Name)),
+			"",
+			"",
+			"", // Empty line for help text
 		}
-		content = append(content, m.styles.Context.Render(fmt.Sprintf("Service: %s | Category: %s",
-			m.selectedService.Name, m.selectedCategory.Name)))
-		content = append(content, "\n")
-		content = append(content, m.table.View())
-		content = append(content, "\n")
-		content = append(content, m.styles.Help.Render("↑/↓: navigate • enter: select • -: back • q: quit"))
-
-		return m.styles.App.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				content...,
-			),
-		)
 	case ViewApprovals:
-		var content []string
-		content = append(content, m.styles.Title.Render("Pipeline Approvals"))
-		if m.isLoading {
-			content = append(content, m.spinner.View())
-		} else {
-			content = append(content, "")
+		content = []string{
+			m.styles.Title.Render("Pipeline Approvals"),
+			m.styles.Context.Render(fmt.Sprintf("Profile: %s\nRegion: %s",
+				m.awsProfile,
+				m.awsRegion)),
+			"",
+			"",
+			"", // Empty line for help text
 		}
-		content = append(content, m.styles.Context.Render("Profile: "+m.awsProfile+" | Region: "+m.awsRegion))
-		content = append(content, "\n")
-		content = append(content, m.table.View())
-		content = append(content, "\n")
-		content = append(content, m.styles.Help.Render("↑/↓: navigate • enter: select • -: back • q: quit"))
-
-		return m.styles.App.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				content...,
-			),
-		)
 	case ViewConfirmation:
-		return m.styles.App.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				m.styles.Title.Render("Execute Action"),
-				m.styles.Context.Render(
-					"Pipeline: "+m.selectedApproval.PipelineName+
-						" | Stage: "+m.selectedApproval.StageName+
-						" | Action: "+m.selectedApproval.ActionName,
-				),
-				"\n",
-				m.table.View(),
-				"\n",
-				m.styles.Help.Render("↑/↓: navigate • enter: select • -: back • q: quit"),
-			),
-		)
+		content = []string{
+			m.styles.Title.Render("Execute Action"),
+			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
+				m.selectedApproval.PipelineName,
+				m.selectedApproval.StageName,
+				m.selectedApproval.ActionName)),
+			"",
+			"",
+			"", // Empty line for help text
+		}
 	case ViewSummary:
-		return m.styles.App.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				m.styles.Title.Render("Enter Summary"),
-				m.styles.Context.Render(
-					"Pipeline: "+m.selectedApproval.PipelineName+
-						" | Stage: "+m.selectedApproval.StageName+
-						" | Action: "+m.selectedApproval.ActionName,
-				),
-				"\n",
-				"Summary: "+m.summary+"_",
-				"\n",
-				m.styles.Help.Render("enter: confirm • -: back • q: quit"),
-			),
-		)
+		content = []string{
+			m.styles.Title.Render("Enter Summary"),
+			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
+				m.selectedApproval.PipelineName,
+				m.selectedApproval.StageName,
+				m.selectedApproval.ActionName)),
+			"",
+			"",
+			"", // Empty line for help text
+		}
 	case ViewExecutingAction:
-		return m.styles.App.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				m.styles.Title.Render("Execute Action"),
-				m.styles.Context.Render(
-					"Pipeline: "+m.selectedApproval.PipelineName+
-						" | Stage: "+m.selectedApproval.StageName+
-						" | Action: "+m.selectedApproval.ActionName+
-						" | Summary: "+m.summary,
-				),
-				"\n",
-				m.table.View(),
-				"\n",
-				m.styles.Help.Render("↑/↓: navigate • enter: select • -: back • q: quit"),
-			),
-		)
-	default:
-		return "Loading..."
+		content = []string{
+			m.styles.Title.Render("Execute Action"),
+			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s\nSummary: %s",
+				m.selectedApproval.PipelineName,
+				m.selectedApproval.StageName,
+				m.selectedApproval.ActionName,
+				m.summary)),
+			"",
+			"",
+			"", // Empty line for help text
+		}
 	}
+
+	// Add loading spinner if needed
+	if m.isLoading {
+		content[2] = m.spinner.View()
+	}
+
+	// Replace content with table view for list-based views
+	if !m.manualInput && m.currentView != ViewSummary {
+		tableView := m.table.View()
+		content[3] = tableView
+	}
+
+	// Add input field for manual input views
+	if m.manualInput {
+		content[3] = "Enter value: " + m.inputBuffer + "_"
+	} else if m.currentView == ViewSummary {
+		content[3] = "Summary: " + m.summary + "_"
+	}
+
+	// Add help text
+	var help string
+	switch m.currentView {
+	case ViewProviders:
+		help = "↑/↓: navigate • enter: select • q: quit"
+	case ViewAWSConfig:
+		help = "↑/↓: navigate • enter: select • tab: toggle input • -: back • q: quit"
+	case ViewSummary:
+		help = "enter: confirm • -: back • q: quit"
+	default:
+		help = "↑/↓: navigate • enter: select • -: back • q: quit"
+	}
+	content[4] = m.styles.Help.Render(help)
+
+	// Join all content vertically with consistent spacing
+	return m.styles.App.Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			content...,
+		),
+	)
 }
 
 func (m Model) handleEnter() (tea.Model, tea.Cmd) {
@@ -676,7 +658,7 @@ func (m *Model) updateTableForView() {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(10),
+		table.WithHeight(6),
 	)
 
 	t.SetStyles(m.styles.Table)
