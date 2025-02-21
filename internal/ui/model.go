@@ -669,11 +669,13 @@ func (m Model) navigateBack() Model {
 	newModel := m
 	switch m.currentView {
 	case ViewAWSConfig:
-		if m.awsRegion != "" {
+		if m.awsProfile != "" {
+			// If we're in region selection, just clear region and stay in AWS config
 			newModel.awsRegion = ""
-		} else if m.awsProfile != "" {
 			newModel.awsProfile = ""
+			// Don't change the view - we'll stay in AWS config to show profiles
 		} else {
+			// If we're in profile selection, go back to providers
 			newModel.currentView = ViewProviders
 		}
 		newModel.manualInput = false
