@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -37,8 +38,9 @@ type PipelineStatus struct {
 
 // StageStatus represents the status of a pipeline stage
 type StageStatus struct {
-	Name   string
-	Status string
+	Name        string
+	Status      string
+	LastUpdated string
 }
 
 // Common errors.
@@ -284,12 +286,28 @@ func (p *Provider) getPipelineStatus(ctx context.Context, pipeline types.Pipelin
 
 	for i, stage := range stateOutput.StageStates {
 		stageStatus := "Unknown"
+		lastUpdated := "N/A"
 		if stage.LatestExecution != nil {
 			stageStatus = string(stage.LatestExecution.Status)
+			if stage.ActionStates != nil && len(stage.ActionStates) > 0 {
+				// Find the most recent action update time
+				var latestTime *time.Time
+				for _, action := range stage.ActionStates {
+					if action.LatestExecution != nil && action.LatestExecution.LastStatusChange != nil {
+						if latestTime == nil || action.LatestExecution.LastStatusChange.After(*latestTime) {
+							latestTime = action.LatestExecution.LastStatusChange
+						}
+					}
+				}
+				if latestTime != nil {
+					lastUpdated = latestTime.UTC().Format("Jan 02 15:04:05") + " UTC"
+				}
+			}
 		}
 		status.Stages[i] = StageStatus{
-			Name:   *stage.StageName,
-			Status: stageStatus,
+			Name:        *stage.StageName,
+			Status:      stageStatus,
+			LastUpdated: lastUpdated,
 		}
 	}
 

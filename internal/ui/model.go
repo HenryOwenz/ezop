@@ -726,6 +726,7 @@ func (m *Model) getColumnsForView() []table.Column {
 		return []table.Column{
 			{Title: "Stage", Width: 30},
 			{Title: "Status", Width: 20},
+			{Title: "Last Updated", Width: 20},
 		}
 	default:
 		return []table.Column{}
@@ -816,6 +817,7 @@ func (m *Model) getRowsForView() []table.Row {
 			rows[i] = table.Row{
 				stage.Name,
 				stage.Status,
+				stage.LastUpdated,
 			}
 		}
 		return rows
