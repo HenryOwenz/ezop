@@ -22,6 +22,8 @@ const (
 	ViewSelectCategory
 	ViewSelectOperation
 	ViewApprovals
+	ViewPipelineStatus
+	ViewPipelineStages
 	ViewConfirmation
 	ViewSummary
 	ViewExecutingAction
@@ -33,6 +35,10 @@ type (
 	approvalsMsg struct {
 		provider  *aws.Provider
 		approvals []aws.ApprovalAction
+	}
+	pipelineStatusMsg struct {
+		provider  *aws.Provider
+		pipelines []aws.PipelineStatus
 	}
 	approvalResultMsg struct{ err error }
 )
@@ -67,6 +73,7 @@ type Model struct {
 	// AWS Resources
 	provider   *aws.Provider
 	approvals  []aws.ApprovalAction
+	pipelines  []aws.PipelineStatus
 	services   []Service
 	categories []Category
 	operations []Operation
@@ -78,6 +85,7 @@ type Model struct {
 	selectedApproval  *aws.ApprovalAction
 	approveAction     bool
 	summary           string
+	selectedPipeline  *aws.PipelineStatus
 }
 
 // Service represents an AWS service
@@ -110,198 +118,215 @@ func New() Model {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#DD6B20", Dark: "#ED8936"}).Italic(true)
 
 	ti := textinput.New()
-	ti.Placeholder = "Enter value..."
-	ti.CharLimit = 156
-	ti.Width = 30
+	ti.Placeholder = "Enter comment..."
+	ti.CharLimit = 100
+	ti.Width = 50
+
+	t := table.New(
+		table.WithHeight(6),
+		table.WithFocused(true),
+	)
+	t.SetStyles(DefaultStyles().Table)
 
 	m := Model{
+		spinner:     s,
+		textInput:   ti,
+		table:       t,
 		currentView: ViewProviders,
-		profiles:    aws.GetProfiles(),
-		regions: []string{
-			"us-east-1", "us-east-2", "us-west-1", "us-west-2",
-			"eu-west-1", "eu-west-2", "eu-central-1",
-			"ap-southeast-1", "ap-southeast-2", "ap-northeast-1",
-		},
-		styles:    DefaultStyles(),
-		spinner:   s,
-		textInput: ti,
+		styles:      DefaultStyles(),
 	}
+
 	m.updateTableForView()
 	return m
 }
 
-func (m Model) Init() tea.Cmd {
-	return tea.Batch(
-		textinput.Blink,
-		m.spinner.Tick,
-	)
+func (m *Model) Init() tea.Cmd {
+	m.regions = []string{
+		"us-east-1", "us-east-2", "us-west-1", "us-west-2",
+		"eu-west-1", "eu-west-2", "eu-central-1",
+		"ap-southeast-1", "ap-southeast-2", "ap-northeast-1",
+	}
+	m.profiles = aws.GetProfiles()
+	return m.spinner.Tick
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 		return m, nil
-
 	case errMsg:
-		newModel := m
-		newModel.err = msg.err
-		newModel.isLoading = false
-		newModel.loadingMsg = ""
-		return newModel, nil
-
+		return m.handleError(msg)
 	case approvalsMsg:
-		newModel := m
-		newModel.approvals = msg.approvals
-		newModel.provider = msg.provider
-		newModel.currentView = ViewApprovals
-		newModel.isLoading = false
-		newModel.loadingMsg = ""
-		newModel.updateTableForView()
-		return newModel, nil
-
+		return m.handleApprovals(msg)
 	case approvalResultMsg:
-		if msg.err != nil {
-			return m, func() tea.Msg {
-				return msg.err // This will automatically be wrapped in errMsg by the caller
-			}
-		}
-		// First clear loading state
-		newModel := m
-		newModel.isLoading = false
-		newModel.loadingMsg = ""
-		// Then reset approval state and navigate
-		newModel.currentView = ViewSelectCategory
-		newModel.resetApprovalState()
-		// Clear text input
-		newModel.resetTextInput()
-		newModel.updateTableForView()
-		return newModel, nil
-
+		return m.handleApprovalResult(msg)
 	case spinner.TickMsg:
-		if m.isLoading {
-			var cmd tea.Cmd
-			newModel := m
-			newModel.spinner, cmd = m.spinner.Update(msg)
-			return newModel, cmd
-		}
-		return m, nil
-
+		return m.handleSpinnerTick(msg)
 	case tea.KeyMsg:
-		if m.err != nil {
-			switch msg.String() {
-			case "esc", "q", "ctrl+c":
-				return m, tea.Quit
-			case "-":
-				newModel := m
-				newModel.err = nil
-				newModel = newModel.navigateBack()
-				return newModel, nil
-			default:
-				return m, nil
-			}
-		}
-
-		// If we're loading, only handle quit
-		if m.isLoading {
-			switch msg.String() {
-			case "q", "ctrl+c":
-				return m, tea.Quit
-			default:
-				return m, m.spinner.Tick
-			}
-		}
-
-		// Handle text input mode first
-		if m.manualInput || m.currentView == ViewSummary {
-			// Only allow ctrl+c to quit in text input mode
-			if msg.String() == "ctrl+c" {
-				return m, tea.Quit
-			}
-
-			// Allow escape to cancel text input
-			if msg.String() == "esc" {
-				newModel := m
-				if m.currentView == ViewSummary {
-					newModel = newModel.navigateBack()
-					return newModel, nil
-				}
-				newModel.manualInput = false
-				newModel.resetTextInput()
-				return newModel, nil
-			}
-
-			// Handle enter key specially in text input mode
-			if msg.String() == "enter" {
-				if m.textInput.Value() != "" {
-					newModel := m
-					if m.currentView == ViewSummary {
-						newModel.summary = m.textInput.Value()
-						newModel.textInput.Blur()
-						newModel.currentView = ViewExecutingAction
-						newModel.updateTableForView()
-						return newModel, nil
-					} else if m.awsProfile == "" {
-						newModel.awsProfile = m.textInput.Value()
-					} else {
-						newModel.awsRegion = m.textInput.Value()
-						newModel.currentView = ViewSelectService
-					}
-					newModel.resetTextInput()
-					newModel.manualInput = false
-					newModel.updateTableForView()
-					return newModel, nil
-				}
-				return m, nil
-			}
-
-			// Handle all other keys as text input
-			var tiCmd tea.Cmd
-			m.textInput, tiCmd = m.textInput.Update(msg)
-			return m, tiCmd
-		}
-
-		// Handle navigation and other commands when not in text input mode
-		switch msg.String() {
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		case "-", "esc":
-			if m.currentView > ViewProviders {
-				newModel := m.navigateBack()
-				return newModel, nil
-			}
-		case "tab":
-			if m.currentView == ViewAWSConfig {
-				newModel := m
-				newModel.manualInput = !m.manualInput
-				if newModel.manualInput {
-					newModel.textInput.Focus()
-					newModel.textInput.SetValue("")
-				} else {
-					newModel.textInput.Blur()
-				}
-				return newModel, nil
-			}
-		case "enter":
-			return m.handleEnter()
-		}
-
-		// Handle table navigation for non-input views
-		if !m.manualInput && m.currentView != ViewSummary {
-			var tableCmd tea.Cmd
-			newModel := m
-			newModel.table, tableCmd = m.table.Update(msg)
-			return newModel, tableCmd
-		}
+		return m.handleKeyPress(msg)
+	case pipelineStatusMsg:
+		return m.handlePipelineStatus(msg)
 	}
-
-	return m, cmd
+	return m, nil
 }
 
-func (m Model) View() string {
+func (m *Model) handleError(msg errMsg) (tea.Model, tea.Cmd) {
+	newModel := *m
+	newModel.err = msg.err
+	newModel.isLoading = false
+	return &newModel, nil
+}
+
+func (m *Model) handleApprovals(msg approvalsMsg) (tea.Model, tea.Cmd) {
+	newModel := *m
+	newModel.approvals = msg.approvals
+	newModel.provider = msg.provider
+	newModel.currentView = ViewApprovals
+	newModel.isLoading = false
+	newModel.updateTableForView()
+	return &newModel, nil
+}
+
+func (m *Model) handleApprovalResult(msg approvalResultMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		return m, func() tea.Msg {
+			return errMsg{msg.err}
+		}
+	}
+	// First clear loading state
+	newModel := *m
+	newModel.isLoading = false
+	// Then reset approval state and navigate
+	newModel.currentView = ViewSelectCategory
+	newModel.resetApprovalState()
+	// Clear text input
+	newModel.resetTextInput()
+	newModel.updateTableForView()
+	return &newModel, nil
+}
+
+func (m *Model) handleSpinnerTick(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
+	if m.isLoading {
+		var cmd tea.Cmd
+		newModel := *m
+		newModel.spinner, cmd = m.spinner.Update(msg)
+		return &newModel, cmd
+	}
+	return m, nil
+}
+
+func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.err != nil {
+		return m.handleKeyPressWithError(msg)
+	}
+
+	if m.isLoading {
+		return m.handleKeyPressWhileLoading(msg)
+	}
+
+	if m.manualInput || m.currentView == ViewSummary {
+		return m.handleKeyPressInTextInput(msg)
+	}
+
+	return m.handleKeyPressInNormalMode(msg)
+}
+
+func (m *Model) handleKeyPressWithError(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "q", "ctrl+c":
+		return m, tea.Quit
+	case "-":
+		newModel := *m
+		newModel.err = nil
+		return newModel.navigateBack(), nil
+	}
+	return m, nil
+}
+
+func (m *Model) handleKeyPressWhileLoading(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	}
+	return m, m.spinner.Tick
+}
+
+func (m *Model) handleKeyPressInTextInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc":
+		newModel := *m
+		if m.currentView == ViewSummary {
+			return newModel.navigateBack(), nil
+		}
+		newModel.manualInput = false
+		newModel.resetTextInput()
+		return &newModel, nil
+	case "enter":
+		if m.textInput.Value() != "" {
+			newModel := *m
+			if m.currentView == ViewSummary {
+				newModel.summary = m.textInput.Value()
+				newModel.textInput.Blur()
+				newModel.currentView = ViewExecutingAction
+				newModel.updateTableForView()
+				return &newModel, nil
+			} else if m.awsProfile == "" {
+				newModel.awsProfile = m.textInput.Value()
+			} else {
+				newModel.awsRegion = m.textInput.Value()
+				newModel.currentView = ViewSelectService
+			}
+			newModel.resetTextInput()
+			newModel.manualInput = false
+			newModel.updateTableForView()
+			return &newModel, nil
+		}
+		return m, nil
+	default:
+		var tiCmd tea.Cmd
+		m.textInput, tiCmd = m.textInput.Update(msg)
+		return m, tiCmd
+	}
+}
+
+func (m *Model) handleKeyPressInNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	case "-", "esc":
+		if m.currentView > ViewProviders {
+			return m.navigateBack(), nil
+		}
+	case "tab":
+		if m.currentView == ViewAWSConfig {
+			newModel := *m
+			newModel.manualInput = !m.manualInput
+			if newModel.manualInput {
+				newModel.textInput.Focus()
+				newModel.textInput.SetValue("")
+			} else {
+				newModel.textInput.Blur()
+			}
+			return &newModel, nil
+		}
+	case "enter":
+		return m.handleEnter()
+	}
+
+	// Handle table navigation for non-input views
+	if !m.manualInput && m.currentView != ViewSummary {
+		var tableCmd tea.Cmd
+		newModel := *m
+		newModel.table, tableCmd = m.table.Update(msg)
+		return &newModel, tableCmd
+	}
+
+	return m, nil
+}
+
+func (m *Model) View() string {
 	if m.err != nil {
 		return m.styles.App.Render(
 			lipgloss.JoinVertical(
@@ -348,157 +373,258 @@ func (m Model) View() string {
 	)
 }
 
-func (m Model) handleEnter() (tea.Model, tea.Cmd) {
+// handleEnter processes the enter key press based on the current view
+func (m *Model) handleEnter() (tea.Model, tea.Cmd) {
 	switch m.currentView {
 	case ViewProviders:
-		if selected := m.table.SelectedRow(); len(selected) > 0 {
-			if selected[0] == "Amazon Web Services" {
-				newModel := m
-				newModel.currentView = ViewAWSConfig
-				newModel.updateTableForView()
-				return newModel, nil
-			}
-		}
+		return m.handleProviderSelection()
 	case ViewAWSConfig:
-		if m.manualInput {
-			if m.textInput.Value() != "" {
-				newModel := m
-				if m.awsProfile == "" {
-					newModel.awsProfile = m.textInput.Value()
-				} else {
-					newModel.awsRegion = m.textInput.Value()
-					newModel.currentView = ViewSelectService
-				}
-				newModel.resetTextInput()
-				newModel.manualInput = false
-				newModel.updateTableForView()
-				return newModel, nil
-			}
-		} else if selected := m.table.SelectedRow(); len(selected) > 0 {
-			newModel := m
-			if m.awsProfile == "" {
-				newModel.awsProfile = selected[0]
-			} else {
-				newModel.awsRegion = selected[0]
-				newModel.currentView = ViewSelectService
-			}
-			newModel.updateTableForView()
-			return newModel, nil
-		}
+		return m.handleAWSConfigSelection()
 	case ViewSelectService:
-		if selected := m.table.SelectedRow(); len(selected) > 0 {
-			if selected[0] == "CodePipeline" {
-				newModel := m
-				newModel.selectedService = &Service{
-					Name:        selected[0],
-					Description: selected[1],
-					Available:   true,
-				}
-				newModel.currentView = ViewSelectCategory
-				newModel.updateTableForView()
-				return newModel, nil
-			}
-		}
+		return m.handleServiceSelection()
 	case ViewSelectCategory:
-		if selected := m.table.SelectedRow(); len(selected) > 0 {
-			if selected[0] == "Workflows" {
-				newModel := m
-				newModel.selectedCategory = &Category{
-					Name:        selected[0],
-					Description: selected[1],
-					Available:   true,
-				}
-				newModel.currentView = ViewSelectOperation
-				newModel.updateTableForView()
-				return newModel, nil
-			}
-		}
+		return m.handleCategorySelection()
 	case ViewSelectOperation:
-		if selected := m.table.SelectedRow(); len(selected) > 0 {
-			if selected[0] == "Pipeline Approvals" {
-				newModel := m
-				newModel.selectedOperation = &Operation{
-					Name:        selected[0],
-					Description: selected[1],
-				}
-				newModel.isLoading = true
-				newModel.loadingMsg = "Fetching pipeline approvals..."
-				return newModel, tea.Batch(
-					newModel.spinner.Tick,
-					m.initializeAWS,
-				)
-			}
-		}
+		return m.handleOperationSelection()
 	case ViewApprovals:
+		return m.handleApprovalSelection()
+	case ViewConfirmation:
+		return m.handleConfirmationSelection()
+	case ViewSummary:
+		return m.handleSummaryConfirmation()
+	case ViewExecutingAction:
+		return m.handleExecutionSelection()
+	case ViewPipelineStatus:
 		if selected := m.table.SelectedRow(); len(selected) > 0 {
-			newModel := m
-			for _, approval := range m.approvals {
-				if approval.PipelineName == selected[0] {
-					newModel.selectedApproval = &approval
+			newModel := *m
+			for _, pipeline := range m.pipelines {
+				if pipeline.Name == selected[0] {
+					newModel.selectedPipeline = &pipeline
 					break
 				}
 			}
-			if newModel.selectedApproval != nil {
-				newModel.currentView = ViewConfirmation
+			if newModel.selectedPipeline != nil {
+				newModel.currentView = ViewPipelineStages
 				newModel.updateTableForView()
-				return newModel, nil
-			}
-		}
-	case ViewConfirmation:
-		if selected := m.table.SelectedRow(); len(selected) > 0 {
-			newModel := m
-			switch selected[0] {
-			case "Approve":
-				newModel.approveAction = true
-				newModel.currentView = ViewSummary
-				newModel.setTextInputForApproval(true)
-				return newModel, nil
-			case "Reject":
-				newModel.approveAction = false
-				newModel.currentView = ViewSummary
-				newModel.setTextInputForApproval(false)
-				return newModel, nil
-			}
-		}
-	case ViewSummary:
-		if m.summary != "" {
-			newModel := m
-			newModel.currentView = ViewExecutingAction
-			newModel.updateTableForView()
-			return newModel, nil
-		}
-	case ViewExecutingAction:
-		if selected := m.table.SelectedRow(); len(selected) > 0 {
-			switch selected[0] {
-			case "Execute":
-				newModel := m
-				newModel.isLoading = true
-				newModel.loadingMsg = fmt.Sprintf("%sing pipeline...", m.approveAction)
-				// Clear text input
-				newModel.resetTextInput()
-				return newModel, tea.Batch(
-					newModel.spinner.Tick,
-					func() tea.Msg {
-						err := m.provider.HandleApproval(context.Background(), m.selectedApproval, m.approveAction, m.summary)
-						return approvalResultMsg{err: err}
-					},
-				)
-			case "Cancel":
-				newModel := m
-				newModel.currentView = ViewSelectCategory
-				newModel.resetApprovalState()
-				// Clear text input
-				newModel.resetTextInput()
-				newModel.updateTableForView()
-				return newModel, nil
+				return &newModel, nil
 			}
 		}
 	}
 	return m, nil
 }
 
-func (m Model) initializeAWS() tea.Msg {
-	provider, err := aws.New(m.awsProfile, m.awsRegion)
+func (m *Model) handleProviderSelection() (tea.Model, tea.Cmd) {
+	if selected := m.table.SelectedRow(); len(selected) > 0 {
+		if selected[0] == "Amazon Web Services" {
+			newModel := *m
+			newModel.currentView = ViewAWSConfig
+			newModel.updateTableForView()
+			return &newModel, nil
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleAWSConfigSelection() (tea.Model, tea.Cmd) {
+	if m.manualInput {
+		return m.handleManualAWSConfig()
+	}
+	return m.handleTableAWSConfig()
+}
+
+func (m *Model) handleManualAWSConfig() (tea.Model, tea.Cmd) {
+	if m.textInput.Value() == "" {
+		return m, nil
+	}
+	newModel := *m
+	if m.awsProfile == "" {
+		newModel.awsProfile = m.textInput.Value()
+	} else {
+		newModel.awsRegion = m.textInput.Value()
+		newModel.currentView = ViewSelectService
+	}
+	newModel.resetTextInput()
+	newModel.manualInput = false
+	newModel.updateTableForView()
+	return &newModel, nil
+}
+
+func (m *Model) handleTableAWSConfig() (tea.Model, tea.Cmd) {
+	if selected := m.table.SelectedRow(); len(selected) > 0 {
+		newModel := *m
+		if m.awsProfile == "" {
+			newModel.awsProfile = selected[0]
+		} else {
+			newModel.awsRegion = selected[0]
+			newModel.currentView = ViewSelectService
+		}
+		newModel.updateTableForView()
+		return &newModel, nil
+	}
+	return m, nil
+}
+
+func (m *Model) handleServiceSelection() (tea.Model, tea.Cmd) {
+	if selected := m.table.SelectedRow(); len(selected) > 0 {
+		if selected[0] == "CodePipeline" {
+			newModel := *m
+			newModel.selectedService = &Service{
+				Name:        selected[0],
+				Description: selected[1],
+				Available:   true,
+			}
+			newModel.currentView = ViewSelectCategory
+			newModel.updateTableForView()
+			return &newModel, nil
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleCategorySelection() (tea.Model, tea.Cmd) {
+	if selected := m.table.SelectedRow(); len(selected) > 0 {
+		if selected[0] == "Workflows" {
+			newModel := *m
+			newModel.selectedCategory = &Category{
+				Name:        selected[0],
+				Description: selected[1],
+				Available:   true,
+			}
+			newModel.currentView = ViewSelectOperation
+			newModel.updateTableForView()
+			return &newModel, nil
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleOperationSelection() (tea.Model, tea.Cmd) {
+	if selected := m.table.SelectedRow(); len(selected) > 0 {
+		newModel := *m
+		switch selected[0] {
+		case "Pipeline Approvals":
+			newModel.selectedOperation = &Operation{
+				Name:        selected[0],
+				Description: selected[1],
+			}
+			newModel.isLoading = true
+			return &newModel, tea.Batch(
+				newModel.spinner.Tick,
+				m.initializeAWS,
+			)
+		case "Pipeline Status":
+			newModel.selectedOperation = &Operation{
+				Name:        selected[0],
+				Description: selected[1],
+			}
+			newModel.isLoading = true
+			return &newModel, tea.Batch(
+				newModel.spinner.Tick,
+				m.initializePipelineStatus,
+			)
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleApprovalSelection() (tea.Model, tea.Cmd) {
+	if selected := m.table.SelectedRow(); len(selected) > 0 {
+		newModel := *m
+		for _, approval := range m.approvals {
+			if approval.PipelineName == selected[0] {
+				newModel.selectedApproval = &approval
+				break
+			}
+		}
+		if newModel.selectedApproval != nil {
+			newModel.currentView = ViewConfirmation
+			newModel.updateTableForView()
+			return &newModel, nil
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleConfirmationSelection() (tea.Model, tea.Cmd) {
+	if selected := m.table.SelectedRow(); len(selected) > 0 {
+		newModel := *m
+		switch selected[0] {
+		case "Approve":
+			newModel.approveAction = true
+			newModel.currentView = ViewSummary
+			newModel.setTextInputForApproval(true)
+			return &newModel, nil
+		case "Reject":
+			newModel.approveAction = false
+			newModel.currentView = ViewSummary
+			newModel.setTextInputForApproval(false)
+			return &newModel, nil
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleSummaryConfirmation() (tea.Model, tea.Cmd) {
+	newModel := *m
+	newModel.currentView = ViewExecutingAction
+	newModel.isLoading = true
+
+	return &newModel, tea.Batch(
+		m.spinner.Tick,
+		func() tea.Msg {
+			err := m.provider.PutApprovalResult(
+				context.Background(),
+				*m.selectedApproval,
+				m.approveAction,
+				m.textInput.Value(),
+			)
+			if err != nil {
+				return errMsg{err}
+			}
+			return approvalResultMsg{}
+		},
+	)
+}
+
+func (m *Model) handleExecutionSelection() (tea.Model, tea.Cmd) {
+	if selected := m.table.SelectedRow(); len(selected) > 0 {
+		switch selected[0] {
+		case "Execute":
+			newModel := *m
+			newModel.isLoading = true
+			// Clear text input
+			newModel.resetTextInput()
+			return &newModel, tea.Batch(
+				newModel.spinner.Tick,
+				func() tea.Msg {
+					err := m.provider.PutApprovalResult(
+						context.Background(),
+						*m.selectedApproval,
+						m.approveAction,
+						m.summary,
+					)
+					if err != nil {
+						return errMsg{err}
+					}
+					// Return empty approvalResultMsg to trigger state transition
+					return approvalResultMsg{}
+				},
+			)
+		case "Cancel":
+			newModel := *m
+			newModel.currentView = ViewSelectCategory
+			newModel.resetApprovalState()
+			// Clear text input
+			newModel.resetTextInput()
+			newModel.updateTableForView()
+			return &newModel, nil
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) initializeAWS() tea.Msg {
+	provider, err := aws.New(context.Background(), m.awsProfile, m.awsRegion)
 	if err != nil {
 		return errMsg{err}
 	}
@@ -511,6 +637,23 @@ func (m Model) initializeAWS() tea.Msg {
 	return approvalsMsg{
 		provider:  provider,
 		approvals: approvals,
+	}
+}
+
+func (m *Model) initializePipelineStatus() tea.Msg {
+	provider, err := aws.New(context.Background(), m.awsProfile, m.awsRegion)
+	if err != nil {
+		return errMsg{err}
+	}
+
+	pipelines, err := provider.GetPipelineStatus(context.Background())
+	if err != nil {
+		return errMsg{err}
+	}
+
+	return pipelineStatusMsg{
+		provider:  provider,
+		pipelines: pipelines,
 	}
 }
 
@@ -574,6 +717,16 @@ func (m *Model) getColumnsForView() []table.Column {
 			{Title: "Action", Width: 30},
 			{Title: "Description", Width: 50},
 		}
+	case ViewPipelineStatus:
+		return []table.Column{
+			{Title: "Pipeline", Width: 40},
+			{Title: "Description", Width: 50},
+		}
+	case ViewPipelineStages:
+		return []table.Column{
+			{Title: "Stage", Width: 30},
+			{Title: "Status", Width: 20},
+		}
 	default:
 		return []table.Column{}
 	}
@@ -614,7 +767,7 @@ func (m *Model) getRowsForView() []table.Row {
 		if m.selectedCategory != nil && m.selectedCategory.Name == "Workflows" {
 			return []table.Row{
 				{"Pipeline Approvals", "Manage Pipeline Approvals"},
-				{"Pipeline Status (Coming Soon)", "View Pipeline Status"},
+				{"Pipeline Status", "View Pipeline Status"},
 			}
 		}
 		return []table.Row{}
@@ -642,13 +795,37 @@ func (m *Model) getRowsForView() []table.Row {
 			{"Execute", fmt.Sprintf("Execute %s action", action)},
 			{"Cancel", "Cancel and return to main menu"},
 		}
+	case ViewPipelineStatus:
+		if m.pipelines == nil {
+			return []table.Row{}
+		}
+		rows := make([]table.Row, len(m.pipelines))
+		for i, pipeline := range m.pipelines {
+			rows[i] = table.Row{
+				pipeline.Name,
+				fmt.Sprintf("%d stages", len(pipeline.Stages)),
+			}
+		}
+		return rows
+	case ViewPipelineStages:
+		if m.selectedPipeline == nil {
+			return []table.Row{}
+		}
+		rows := make([]table.Row, len(m.selectedPipeline.Stages))
+		for i, stage := range m.selectedPipeline.Stages {
+			rows[i] = table.Row{
+				stage.Name,
+				stage.Status,
+			}
+		}
+		return rows
 	default:
 		return []table.Row{}
 	}
 }
 
-func (m Model) navigateBack() Model {
-	newModel := m
+func (m *Model) navigateBack() *Model {
+	newModel := *m
 	switch m.currentView {
 	case ViewAWSConfig:
 		if m.awsProfile != "" {
@@ -691,9 +868,16 @@ func (m Model) navigateBack() Model {
 		} else {
 			newModel.textInput.Placeholder = "Enter rejection comment..."
 		}
+	case ViewPipelineStages:
+		newModel.currentView = ViewPipelineStatus
+		newModel.selectedPipeline = nil
+	case ViewPipelineStatus:
+		newModel.currentView = ViewSelectOperation
+		newModel.pipelines = nil
+		newModel.provider = nil
 	}
 	newModel.updateTableForView()
-	return newModel
+	return &newModel
 }
 
 // Helper functions for common operations
@@ -754,6 +938,15 @@ func (m *Model) getContextText() string {
 			m.selectedApproval.StageName,
 			m.selectedApproval.ActionName,
 			m.summary)
+	case ViewPipelineStatus:
+		return fmt.Sprintf("Profile: %s\nRegion: %s",
+			m.awsProfile,
+			m.awsRegion)
+	case ViewPipelineStages:
+		return fmt.Sprintf("Profile: %s\nRegion: %s\nPipeline: %s",
+			m.awsProfile,
+			m.awsRegion,
+			m.selectedPipeline.Name)
 	default:
 		return ""
 	}
@@ -783,6 +976,10 @@ func (m *Model) getTitleText() string {
 		return "Enter Comment"
 	case ViewExecutingAction:
 		return "Execute Action"
+	case ViewPipelineStatus:
+		return "Select Pipeline"
+	case ViewPipelineStages:
+		return "Pipeline Stages"
 	default:
 		return ""
 	}
@@ -802,4 +999,14 @@ func (m *Model) getHelpText() string {
 	default:
 		return "↑/↓: navigate • enter: select • esc: back • q: quit"
 	}
+}
+
+func (m *Model) handlePipelineStatus(msg pipelineStatusMsg) (tea.Model, tea.Cmd) {
+	newModel := *m
+	newModel.pipelines = msg.pipelines
+	newModel.provider = msg.provider
+	newModel.currentView = ViewPipelineStatus
+	newModel.isLoading = false
+	newModel.updateTableForView()
+	return &newModel, nil
 }
