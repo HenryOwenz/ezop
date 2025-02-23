@@ -27,44 +27,57 @@ const (
 	ViewExecutingAction
 )
 
+// Message types for internal communication
+type (
+	errMsg       struct{ err error }
+	approvalsMsg struct {
+		provider  *aws.Provider
+		approvals []aws.ApprovalAction
+	}
+	approvalResultMsg struct{ err error }
+)
+
 // Model represents the application state
 type Model struct {
-	table       table.Model
-	width       int
-	height      int
-	styles      Styles
+	// UI Components
+	table     table.Model
+	textInput textinput.Model
+	spinner   spinner.Model
+	styles    Styles
+
+	// Window dimensions
+	width  int
+	height int
+
+	// View state
 	currentView View
-	awsProfile  string
-	awsRegion   string
-	profiles    []string
-	regions     []string
 	manualInput bool
-	textInput   textinput.Model
 	err         error
-	approvals   []aws.ApprovalAction
-	provider    *aws.Provider
+
+	// AWS Configuration
+	awsProfile string
+	awsRegion  string
+	profiles   []string
+	regions    []string
 
 	// Loading state
 	isLoading  bool
 	loadingMsg string
-	spinner    spinner.Model
 
-	// Service selection state
-	services        []Service
-	selectedService *Service
+	// AWS Resources
+	provider   *aws.Provider
+	approvals  []aws.ApprovalAction
+	services   []Service
+	categories []Category
+	operations []Operation
 
-	// Category selection state
-	categories       []Category
-	selectedCategory *Category
-
-	// Operation selection state
-	operations        []Operation
+	// Selection state
+	selectedService   *Service
+	selectedCategory  *Category
 	selectedOperation *Operation
-
-	// Approval state
-	selectedApproval *aws.ApprovalAction
-	approveAction    bool
-	summary          string
+	selectedApproval  *aws.ApprovalAction
+	approveAction     bool
+	summary           string
 }
 
 // Service represents an AWS service
@@ -90,6 +103,7 @@ type Operation struct {
 	Description string
 }
 
+// New creates and initializes a new Model
 func New() Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -152,7 +166,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case approvalResultMsg:
 		if msg.err != nil {
 			return m, func() tea.Msg {
-				return errMsg{msg.err}
+				return msg.err // This will automatically be wrapped in errMsg by the caller
 			}
 		}
 		// First clear loading state
@@ -161,13 +175,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newModel.loadingMsg = ""
 		// Then reset approval state and navigate
 		newModel.currentView = ViewSelectCategory
-		newModel.approvals = nil
-		newModel.provider = nil
-		newModel.selectedApproval = nil
-		newModel.summary = ""
+		newModel.resetApprovalState()
 		// Clear text input
-		newModel.textInput.SetValue("")
-		newModel.textInput.Blur()
+		newModel.resetTextInput()
 		newModel.updateTableForView()
 		return newModel, nil
 
@@ -220,8 +230,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return newModel, nil
 				}
 				newModel.manualInput = false
-				newModel.textInput.SetValue("")
-				newModel.textInput.Blur()
+				newModel.resetTextInput()
 				return newModel, nil
 			}
 
@@ -241,8 +250,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						newModel.awsRegion = m.textInput.Value()
 						newModel.currentView = ViewSelectService
 					}
-					newModel.textInput.SetValue("")
-					newModel.textInput.Blur()
+					newModel.resetTextInput()
 					newModel.manualInput = false
 					newModel.updateTableForView()
 					return newModel, nil
@@ -305,109 +313,12 @@ func (m Model) View() string {
 		)
 	}
 
-	var content []string
-
-	// Add title and context based on current view
-	switch m.currentView {
-	case ViewProviders:
-		content = []string{
-			m.styles.Title.Render("Select Cloud Provider"),
-			m.styles.Context.Render("A simple tool to manage your cloud resources"),
-			"",
-			"",
-			"", // Empty line for help text
-		}
-	case ViewAWSConfig:
-		if m.awsProfile == "" {
-			content = []string{
-				m.styles.Title.Render("Select AWS Profile"),
-				m.styles.Context.Render("Amazon Web Services"),
-				"",
-				"",
-				"", // Empty line for help text
-			}
-		} else {
-			content = []string{
-				m.styles.Title.Render("Select AWS Region"),
-				m.styles.Context.Render(fmt.Sprintf("Profile: %s", m.awsProfile)),
-				"",
-				"",
-				"", // Empty line for help text
-			}
-		}
-	case ViewSelectService:
-		content = []string{
-			m.styles.Title.Render("Select AWS Service"),
-			m.styles.Context.Render(fmt.Sprintf("Profile: %s\nRegion: %s",
-				m.awsProfile,
-				m.awsRegion)),
-			"",
-			"",
-			"", // Empty line for help text
-		}
-	case ViewSelectCategory:
-		content = []string{
-			m.styles.Title.Render("Select Category"),
-			m.styles.Context.Render(fmt.Sprintf("Service: %s",
-				m.selectedService.Name)),
-			"",
-			"",
-			"", // Empty line for help text
-		}
-	case ViewSelectOperation:
-		content = []string{
-			m.styles.Title.Render("Select Operation"),
-			m.styles.Context.Render(fmt.Sprintf("Service: %s\nCategory: %s",
-				m.selectedService.Name,
-				m.selectedCategory.Name)),
-			"",
-			"",
-			"", // Empty line for help text
-		}
-	case ViewApprovals:
-		content = []string{
-			m.styles.Title.Render("Pipeline Approvals"),
-			m.styles.Context.Render(fmt.Sprintf("Profile: %s\nRegion: %s",
-				m.awsProfile,
-				m.awsRegion)),
-			"",
-			"",
-			"", // Empty line for help text
-		}
-	case ViewConfirmation:
-		content = []string{
-			m.styles.Title.Render("Execute Action"),
-			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
-				m.selectedApproval.PipelineName,
-				m.selectedApproval.StageName,
-				m.selectedApproval.ActionName)),
-			"",
-			"",
-			"", // Empty line for help text
-		}
-	case ViewSummary:
-		content = []string{
-			m.styles.Title.Render("Enter Comment"),
-			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
-				m.selectedApproval.PipelineName,
-				m.selectedApproval.StageName,
-				m.selectedApproval.ActionName)),
-			"",
-			"",
-			"", // Empty line for help text
-		}
-	case ViewExecutingAction:
-		content = []string{
-			m.styles.Title.Render("Execute Action"),
-			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s\nComment: %s",
-				m.selectedApproval.PipelineName,
-				m.selectedApproval.StageName,
-				m.selectedApproval.ActionName,
-				m.summary)),
-			"",
-			"",
-			"", // Empty line for help text
-		}
+	content := []string{
+		m.styles.Title.Render(m.getTitleText()),
+		m.styles.Context.Render(m.getContextText()),
+		"",
+		"",
+		"", // Empty line for help text
 	}
 
 	// Add loading spinner if needed
@@ -417,8 +328,7 @@ func (m Model) View() string {
 
 	// Replace content with table view for list-based views
 	if !m.manualInput && m.currentView != ViewSummary {
-		tableView := m.table.View()
-		content[3] = tableView
+		content[3] = m.table.View()
 	}
 
 	// Add input field for manual input views
@@ -427,22 +337,7 @@ func (m Model) View() string {
 	}
 
 	// Add help text
-	var help string
-	switch m.currentView {
-	case ViewProviders:
-		help = "↑/↓: navigate • enter: select • q: quit"
-	case ViewAWSConfig:
-		if m.manualInput {
-			help = "enter: confirm • esc: cancel • ctrl+c: quit"
-		} else {
-			help = "↑/↓: navigate • enter: select • tab: toggle input • esc: back • q: quit"
-		}
-	case ViewSummary:
-		help = "enter: confirm • esc: back • ctrl+c: quit"
-	default:
-		help = "↑/↓: navigate • enter: select • esc: back • q: quit"
-	}
-	content[4] = m.styles.Help.Render(help)
+	content[4] = m.styles.Help.Render(m.getHelpText())
 
 	// Join all content vertically with consistent spacing
 	return m.styles.App.Render(
@@ -474,8 +369,7 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 					newModel.awsRegion = m.textInput.Value()
 					newModel.currentView = ViewSelectService
 				}
-				newModel.textInput.SetValue("")
-				newModel.textInput.Blur()
+				newModel.resetTextInput()
 				newModel.manualInput = false
 				newModel.updateTableForView()
 				return newModel, nil
@@ -557,14 +451,12 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 			case "Approve":
 				newModel.approveAction = true
 				newModel.currentView = ViewSummary
-				newModel.textInput.Placeholder = "Enter approval comment..."
-				newModel.textInput.Focus()
+				newModel.setTextInputForApproval(true)
 				return newModel, nil
 			case "Reject":
 				newModel.approveAction = false
 				newModel.currentView = ViewSummary
-				newModel.textInput.Placeholder = "Enter rejection comment..."
-				newModel.textInput.Focus()
+				newModel.setTextInputForApproval(false)
 				return newModel, nil
 			}
 		}
@@ -583,8 +475,7 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 				newModel.isLoading = true
 				newModel.loadingMsg = fmt.Sprintf("%sing pipeline...", m.approveAction)
 				// Clear text input
-				newModel.textInput.SetValue("")
-				newModel.textInput.Blur()
+				newModel.resetTextInput()
 				return newModel, tea.Batch(
 					newModel.spinner.Tick,
 					func() tea.Msg {
@@ -595,13 +486,9 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 			case "Cancel":
 				newModel := m
 				newModel.currentView = ViewSelectCategory
-				newModel.approvals = nil
-				newModel.provider = nil
-				newModel.selectedApproval = nil
-				newModel.summary = ""
+				newModel.resetApprovalState()
 				// Clear text input
-				newModel.textInput.SetValue("")
-				newModel.textInput.Blur()
+				newModel.resetTextInput()
 				newModel.updateTableForView()
 				return newModel, nil
 			}
@@ -627,108 +514,10 @@ func (m Model) initializeAWS() tea.Msg {
 	}
 }
 
-type errMsg struct{ err error }
-type approvalsMsg struct {
-	provider  *aws.Provider
-	approvals []aws.ApprovalAction
-}
-type approvalResultMsg struct{ err error }
-
+// updateTableForView updates the table model based on the current view
 func (m *Model) updateTableForView() {
-	var columns []table.Column
-	var rows []table.Row
-
-	switch m.currentView {
-	case ViewProviders:
-		columns = []table.Column{
-			{Title: "Provider", Width: 30},
-			{Title: "Description", Width: 50},
-		}
-		rows = []table.Row{
-			{"Amazon Web Services", "AWS Cloud Services"},
-			{"Microsoft Azure (Coming Soon)", "Azure Cloud Platform"},
-			{"Google Cloud Platform (Coming Soon)", "Google Cloud Services"},
-		}
-	case ViewAWSConfig:
-		if m.awsProfile == "" {
-			columns = []table.Column{
-				{Title: "Profile", Width: 30},
-			}
-			for _, profile := range m.profiles {
-				rows = append(rows, table.Row{profile})
-			}
-		} else {
-			columns = []table.Column{
-				{Title: "Region", Width: 30},
-			}
-			for _, region := range m.regions {
-				rows = append(rows, table.Row{region})
-			}
-		}
-	case ViewSelectService:
-		columns = []table.Column{
-			{Title: "Service", Width: 30},
-			{Title: "Description", Width: 50},
-		}
-		rows = []table.Row{
-			{"CodePipeline", "Continuous Delivery Service"},
-		}
-	case ViewSelectCategory:
-		columns = []table.Column{
-			{Title: "Category", Width: 30},
-			{Title: "Description", Width: 50},
-		}
-		rows = []table.Row{
-			{"Workflows", "Pipeline Workflows and Approvals"},
-			{"Operations (Coming Soon)", "Service Operations"},
-		}
-	case ViewSelectOperation:
-		columns = []table.Column{
-			{Title: "Operation", Width: 30},
-			{Title: "Description", Width: 50},
-		}
-		if m.selectedCategory != nil && m.selectedCategory.Name == "Workflows" {
-			rows = []table.Row{
-				{"Pipeline Approvals", "Manage Pipeline Approvals"},
-				{"Pipeline Status (Coming Soon)", "View Pipeline Status"},
-			}
-		}
-	case ViewApprovals:
-		columns = []table.Column{
-			{Title: "Pipeline", Width: 40},
-			{Title: "Stage", Width: 30},
-			{Title: "Action", Width: 20},
-		}
-		for _, approval := range m.approvals {
-			rows = append(rows, table.Row{
-				approval.PipelineName,
-				approval.StageName,
-				approval.ActionName,
-			})
-		}
-	case ViewConfirmation:
-		columns = []table.Column{
-			{Title: "Action", Width: 30},
-			{Title: "Description", Width: 50},
-		}
-		rows = []table.Row{
-			{"Approve", "Approve the pipeline stage"},
-			{"Reject", "Reject the pipeline stage"},
-		}
-	case ViewExecutingAction:
-		columns = []table.Column{
-			{Title: "Action", Width: 30},
-			{Title: "Description", Width: 50},
-		}
-		action := "approve"
-		if !m.approveAction {
-			action = "reject"
-		}
-		rows = []table.Row{
-			{"Execute", fmt.Sprintf("Execute %s action", action)},
-			{"Cancel", "Cancel and return to main menu"},
-		}
-	}
+	columns := m.getColumnsForView()
+	rows := m.getRowsForView()
 
 	t := table.New(
 		table.WithColumns(columns),
@@ -739,6 +528,123 @@ func (m *Model) updateTableForView() {
 
 	t.SetStyles(m.styles.Table)
 	m.table = t
+}
+
+// getColumnsForView returns the appropriate columns for the current view
+func (m *Model) getColumnsForView() []table.Column {
+	switch m.currentView {
+	case ViewProviders:
+		return []table.Column{
+			{Title: "Provider", Width: 30},
+			{Title: "Description", Width: 50},
+		}
+	case ViewAWSConfig:
+		if m.awsProfile == "" {
+			return []table.Column{{Title: "Profile", Width: 30}}
+		}
+		return []table.Column{{Title: "Region", Width: 30}}
+	case ViewSelectService:
+		return []table.Column{
+			{Title: "Service", Width: 30},
+			{Title: "Description", Width: 50},
+		}
+	case ViewSelectCategory:
+		return []table.Column{
+			{Title: "Category", Width: 30},
+			{Title: "Description", Width: 50},
+		}
+	case ViewSelectOperation:
+		return []table.Column{
+			{Title: "Operation", Width: 30},
+			{Title: "Description", Width: 50},
+		}
+	case ViewApprovals:
+		return []table.Column{
+			{Title: "Pipeline", Width: 40},
+			{Title: "Stage", Width: 30},
+			{Title: "Action", Width: 20},
+		}
+	case ViewConfirmation:
+		return []table.Column{
+			{Title: "Action", Width: 30},
+			{Title: "Description", Width: 50},
+		}
+	case ViewExecutingAction:
+		return []table.Column{
+			{Title: "Action", Width: 30},
+			{Title: "Description", Width: 50},
+		}
+	default:
+		return []table.Column{}
+	}
+}
+
+// getRowsForView returns the appropriate rows for the current view
+func (m *Model) getRowsForView() []table.Row {
+	switch m.currentView {
+	case ViewProviders:
+		return []table.Row{
+			{"Amazon Web Services", "AWS Cloud Services"},
+			{"Microsoft Azure (Coming Soon)", "Azure Cloud Platform"},
+			{"Google Cloud Platform (Coming Soon)", "Google Cloud Services"},
+		}
+	case ViewAWSConfig:
+		if m.awsProfile == "" {
+			rows := make([]table.Row, len(m.profiles))
+			for i, profile := range m.profiles {
+				rows[i] = table.Row{profile}
+			}
+			return rows
+		}
+		rows := make([]table.Row, len(m.regions))
+		for i, region := range m.regions {
+			rows[i] = table.Row{region}
+		}
+		return rows
+	case ViewSelectService:
+		return []table.Row{
+			{"CodePipeline", "Continuous Delivery Service"},
+		}
+	case ViewSelectCategory:
+		return []table.Row{
+			{"Workflows", "Pipeline Workflows and Approvals"},
+			{"Operations (Coming Soon)", "Service Operations"},
+		}
+	case ViewSelectOperation:
+		if m.selectedCategory != nil && m.selectedCategory.Name == "Workflows" {
+			return []table.Row{
+				{"Pipeline Approvals", "Manage Pipeline Approvals"},
+				{"Pipeline Status (Coming Soon)", "View Pipeline Status"},
+			}
+		}
+		return []table.Row{}
+	case ViewApprovals:
+		rows := make([]table.Row, len(m.approvals))
+		for i, approval := range m.approvals {
+			rows[i] = table.Row{
+				approval.PipelineName,
+				approval.StageName,
+				approval.ActionName,
+			}
+		}
+		return rows
+	case ViewConfirmation:
+		return []table.Row{
+			{"Approve", "Approve the pipeline stage"},
+			{"Reject", "Reject the pipeline stage"},
+		}
+	case ViewExecutingAction:
+		action := "approve"
+		if !m.approveAction {
+			action = "reject"
+		}
+		return []table.Row{
+			{"Execute", fmt.Sprintf("Execute %s action", action)},
+			{"Cancel", "Cancel and return to main menu"},
+		}
+	default:
+		return []table.Row{}
+	}
 }
 
 func (m Model) navigateBack() Model {
@@ -755,8 +661,7 @@ func (m Model) navigateBack() Model {
 			newModel.currentView = ViewProviders
 		}
 		newModel.manualInput = false
-		newModel.textInput.SetValue("")
-		newModel.textInput.Blur()
+		newModel.resetTextInput()
 	case ViewSelectService:
 		newModel.currentView = ViewAWSConfig
 		newModel.selectedService = nil
@@ -768,16 +673,14 @@ func (m Model) navigateBack() Model {
 		newModel.selectedOperation = nil
 	case ViewApprovals:
 		newModel.currentView = ViewSelectOperation
-		newModel.approvals = nil
-		newModel.provider = nil
+		newModel.resetApprovalState()
 	case ViewConfirmation:
 		newModel.currentView = ViewApprovals
 		newModel.selectedApproval = nil
 	case ViewSummary:
 		newModel.currentView = ViewConfirmation
 		newModel.summary = ""
-		newModel.textInput.Reset()
-		newModel.textInput.Blur()
+		newModel.resetTextInput()
 	case ViewExecutingAction:
 		newModel.currentView = ViewSummary
 		// When going back to summary, restore the previous comment and focus
@@ -791,4 +694,112 @@ func (m Model) navigateBack() Model {
 	}
 	newModel.updateTableForView()
 	return newModel
+}
+
+// Helper functions for common operations
+func (m *Model) resetApprovalState() {
+	m.approvals = nil
+	m.provider = nil
+	m.selectedApproval = nil
+	m.summary = ""
+}
+
+func (m *Model) resetTextInput() {
+	m.textInput.SetValue("")
+	m.textInput.Blur()
+}
+
+func (m *Model) setTextInputForApproval(isApproval bool) {
+	m.textInput.Focus()
+	if isApproval {
+		m.textInput.Placeholder = "Enter approval comment..."
+	} else {
+		m.textInput.Placeholder = "Enter rejection comment..."
+	}
+}
+
+// getContextText returns the appropriate context text for the current view
+func (m *Model) getContextText() string {
+	switch m.currentView {
+	case ViewProviders:
+		return "A simple tool to manage your cloud resources"
+	case ViewAWSConfig:
+		if m.awsProfile == "" {
+			return "Amazon Web Services"
+		}
+		return fmt.Sprintf("Profile: %s", m.awsProfile)
+	case ViewSelectService:
+		return fmt.Sprintf("Profile: %s\nRegion: %s",
+			m.awsProfile,
+			m.awsRegion)
+	case ViewSelectCategory:
+		return fmt.Sprintf("Service: %s",
+			m.selectedService.Name)
+	case ViewSelectOperation:
+		return fmt.Sprintf("Service: %s\nCategory: %s",
+			m.selectedService.Name,
+			m.selectedCategory.Name)
+	case ViewApprovals:
+		return fmt.Sprintf("Profile: %s\nRegion: %s",
+			m.awsProfile,
+			m.awsRegion)
+	case ViewConfirmation, ViewSummary:
+		return fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
+			m.selectedApproval.PipelineName,
+			m.selectedApproval.StageName,
+			m.selectedApproval.ActionName)
+	case ViewExecutingAction:
+		return fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s\nComment: %s",
+			m.selectedApproval.PipelineName,
+			m.selectedApproval.StageName,
+			m.selectedApproval.ActionName,
+			m.summary)
+	default:
+		return ""
+	}
+}
+
+// getTitleText returns the appropriate title for the current view
+func (m *Model) getTitleText() string {
+	switch m.currentView {
+	case ViewProviders:
+		return "Select Cloud Provider"
+	case ViewAWSConfig:
+		if m.awsProfile == "" {
+			return "Select AWS Profile"
+		}
+		return "Select AWS Region"
+	case ViewSelectService:
+		return "Select AWS Service"
+	case ViewSelectCategory:
+		return "Select Category"
+	case ViewSelectOperation:
+		return "Select Operation"
+	case ViewApprovals:
+		return "Pipeline Approvals"
+	case ViewConfirmation:
+		return "Execute Action"
+	case ViewSummary:
+		return "Enter Comment"
+	case ViewExecutingAction:
+		return "Execute Action"
+	default:
+		return ""
+	}
+}
+
+// getHelpText returns the appropriate help text for the current view
+func (m *Model) getHelpText() string {
+	switch {
+	case m.currentView == ViewProviders:
+		return "↑/↓: navigate • enter: select • q: quit"
+	case m.currentView == ViewAWSConfig && m.manualInput:
+		return "enter: confirm • esc: cancel • ctrl+c: quit"
+	case m.currentView == ViewAWSConfig:
+		return "↑/↓: navigate • enter: select • tab: toggle input • esc: back • q: quit"
+	case m.currentView == ViewSummary:
+		return "enter: confirm • esc: back • ctrl+c: quit"
+	default:
+		return "↑/↓: navigate • enter: select • esc: back • q: quit"
+	}
 }
