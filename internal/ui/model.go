@@ -7,6 +7,7 @@ import (
 	"github.com/HenryOwenz/ezop/v2/internal/aws"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -38,7 +39,7 @@ type Model struct {
 	profiles    []string
 	regions     []string
 	manualInput bool
-	inputBuffer string
+	textInput   textinput.Model
 	err         error
 	approvals   []aws.ApprovalAction
 	provider    *aws.Provider
@@ -92,7 +93,12 @@ type Operation struct {
 func New() Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Italic(true)
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#DD6B20", Dark: "#ED8936"}).Italic(true)
+
+	ti := textinput.New()
+	ti.Placeholder = "Enter value..."
+	ti.CharLimit = 156
+	ti.Width = 30
 
 	m := Model{
 		currentView: ViewProviders,
@@ -102,15 +108,19 @@ func New() Model {
 			"eu-west-1", "eu-west-2", "eu-central-1",
 			"ap-southeast-1", "ap-southeast-2", "ap-northeast-1",
 		},
-		styles:  DefaultStyles(),
-		spinner: s,
+		styles:    DefaultStyles(),
+		spinner:   s,
+		textInput: ti,
 	}
 	m.updateTableForView()
 	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		textinput.Blink,
+		m.spinner.Tick,
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -145,7 +155,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return errMsg{msg.err}
 			}
 		}
-		return m, tea.Quit
+		// First clear loading state
+		newModel := m
+		newModel.isLoading = false
+		newModel.loadingMsg = ""
+		// Then reset approval state and navigate
+		newModel.currentView = ViewSelectCategory
+		newModel.approvals = nil
+		newModel.provider = nil
+		newModel.selectedApproval = nil
+		newModel.summary = ""
+		// Clear text input
+		newModel.textInput.SetValue("")
+		newModel.textInput.Blur()
+		newModel.updateTableForView()
+		return newModel, nil
 
 	case spinner.TickMsg:
 		if m.isLoading {
@@ -181,10 +205,62 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Handle text input mode first
+		if m.manualInput || m.currentView == ViewSummary {
+			// Only allow ctrl+c to quit in text input mode
+			if msg.String() == "ctrl+c" {
+				return m, tea.Quit
+			}
+
+			// Allow escape to cancel text input
+			if msg.String() == "esc" {
+				newModel := m
+				if m.currentView == ViewSummary {
+					newModel = newModel.navigateBack()
+					return newModel, nil
+				}
+				newModel.manualInput = false
+				newModel.textInput.SetValue("")
+				newModel.textInput.Blur()
+				return newModel, nil
+			}
+
+			// Handle enter key specially in text input mode
+			if msg.String() == "enter" {
+				if m.textInput.Value() != "" {
+					newModel := m
+					if m.currentView == ViewSummary {
+						newModel.summary = m.textInput.Value()
+						newModel.textInput.Blur()
+						newModel.currentView = ViewExecutingAction
+						newModel.updateTableForView()
+						return newModel, nil
+					} else if m.awsProfile == "" {
+						newModel.awsProfile = m.textInput.Value()
+					} else {
+						newModel.awsRegion = m.textInput.Value()
+						newModel.currentView = ViewSelectService
+					}
+					newModel.textInput.SetValue("")
+					newModel.textInput.Blur()
+					newModel.manualInput = false
+					newModel.updateTableForView()
+					return newModel, nil
+				}
+				return m, nil
+			}
+
+			// Handle all other keys as text input
+			var tiCmd tea.Cmd
+			m.textInput, tiCmd = m.textInput.Update(msg)
+			return m, tiCmd
+		}
+
+		// Handle navigation and other commands when not in text input mode
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
-		case "-":
+		case "-", "esc":
 			if m.currentView > ViewProviders {
 				newModel := m.navigateBack()
 				return newModel, nil
@@ -193,37 +269,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.currentView == ViewAWSConfig {
 				newModel := m
 				newModel.manualInput = !m.manualInput
-				newModel.inputBuffer = ""
+				if newModel.manualInput {
+					newModel.textInput.Focus()
+					newModel.textInput.SetValue("")
+				} else {
+					newModel.textInput.Blur()
+				}
 				return newModel, nil
 			}
 		case "enter":
 			return m.handleEnter()
-		case "backspace":
-			if m.manualInput {
-				if len(m.inputBuffer) > 0 {
-					newModel := m
-					newModel.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
-					return newModel, nil
-				}
-			} else if m.currentView == ViewSummary {
-				if len(m.summary) > 0 {
-					newModel := m
-					newModel.summary = m.summary[:len(m.summary)-1]
-					return newModel, nil
-				}
-			}
-		default:
-			if m.manualInput {
-				newModel := m
-				newModel.inputBuffer += msg.String()
-				return newModel, nil
-			} else if m.currentView == ViewSummary {
-				newModel := m
-				newModel.summary += msg.String()
-				return newModel, nil
-			}
 		}
 
+		// Handle table navigation for non-input views
 		if !m.manualInput && m.currentView != ViewSummary {
 			var tableCmd tea.Cmd
 			newModel := m
@@ -329,7 +387,7 @@ func (m Model) View() string {
 		}
 	case ViewSummary:
 		content = []string{
-			m.styles.Title.Render("Enter Summary"),
+			m.styles.Title.Render("Enter Comment"),
 			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
 				m.selectedApproval.PipelineName,
 				m.selectedApproval.StageName,
@@ -341,7 +399,7 @@ func (m Model) View() string {
 	case ViewExecutingAction:
 		content = []string{
 			m.styles.Title.Render("Execute Action"),
-			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s\nSummary: %s",
+			m.styles.Context.Render(fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s\nComment: %s",
 				m.selectedApproval.PipelineName,
 				m.selectedApproval.StageName,
 				m.selectedApproval.ActionName,
@@ -364,10 +422,8 @@ func (m Model) View() string {
 	}
 
 	// Add input field for manual input views
-	if m.manualInput {
-		content[3] = "Enter value: " + m.inputBuffer + "_"
-	} else if m.currentView == ViewSummary {
-		content[3] = "Summary: " + m.summary + "_"
+	if m.manualInput || m.currentView == ViewSummary {
+		content[3] = m.textInput.View()
 	}
 
 	// Add help text
@@ -376,11 +432,15 @@ func (m Model) View() string {
 	case ViewProviders:
 		help = "↑/↓: navigate • enter: select • q: quit"
 	case ViewAWSConfig:
-		help = "↑/↓: navigate • enter: select • tab: toggle input • -: back • q: quit"
+		if m.manualInput {
+			help = "enter: confirm • esc: cancel • ctrl+c: quit"
+		} else {
+			help = "↑/↓: navigate • enter: select • tab: toggle input • esc: back • q: quit"
+		}
 	case ViewSummary:
-		help = "enter: confirm • -: back • q: quit"
+		help = "enter: confirm • esc: back • ctrl+c: quit"
 	default:
-		help = "↑/↓: navigate • enter: select • -: back • q: quit"
+		help = "↑/↓: navigate • enter: select • esc: back • q: quit"
 	}
 	content[4] = m.styles.Help.Render(help)
 
@@ -406,15 +466,16 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 		}
 	case ViewAWSConfig:
 		if m.manualInput {
-			if m.inputBuffer != "" {
+			if m.textInput.Value() != "" {
 				newModel := m
 				if m.awsProfile == "" {
-					newModel.awsProfile = m.inputBuffer
+					newModel.awsProfile = m.textInput.Value()
 				} else {
-					newModel.awsRegion = m.inputBuffer
+					newModel.awsRegion = m.textInput.Value()
 					newModel.currentView = ViewSelectService
 				}
-				newModel.inputBuffer = ""
+				newModel.textInput.SetValue("")
+				newModel.textInput.Blur()
 				newModel.manualInput = false
 				newModel.updateTableForView()
 				return newModel, nil
@@ -496,10 +557,14 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 			case "Approve":
 				newModel.approveAction = true
 				newModel.currentView = ViewSummary
+				newModel.textInput.Placeholder = "Enter approval comment..."
+				newModel.textInput.Focus()
 				return newModel, nil
 			case "Reject":
 				newModel.approveAction = false
 				newModel.currentView = ViewSummary
+				newModel.textInput.Placeholder = "Enter rejection comment..."
+				newModel.textInput.Focus()
 				return newModel, nil
 			}
 		}
@@ -517,6 +582,9 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 				newModel := m
 				newModel.isLoading = true
 				newModel.loadingMsg = fmt.Sprintf("%sing pipeline...", m.approveAction)
+				// Clear text input
+				newModel.textInput.SetValue("")
+				newModel.textInput.Blur()
 				return newModel, tea.Batch(
 					newModel.spinner.Tick,
 					func() tea.Msg {
@@ -525,7 +593,17 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 					},
 				)
 			case "Cancel":
-				return m, tea.Quit
+				newModel := m
+				newModel.currentView = ViewSelectCategory
+				newModel.approvals = nil
+				newModel.provider = nil
+				newModel.selectedApproval = nil
+				newModel.summary = ""
+				// Clear text input
+				newModel.textInput.SetValue("")
+				newModel.textInput.Blur()
+				newModel.updateTableForView()
+				return newModel, nil
 			}
 		}
 	}
@@ -594,8 +672,6 @@ func (m *Model) updateTableForView() {
 		}
 		rows = []table.Row{
 			{"CodePipeline", "Continuous Delivery Service"},
-			{"CodeBuild (Coming Soon)", "Build Service"},
-			{"CodeDeploy (Coming Soon)", "Deployment Service"},
 		}
 	case ViewSelectCategory:
 		columns = []table.Column{
@@ -679,7 +755,8 @@ func (m Model) navigateBack() Model {
 			newModel.currentView = ViewProviders
 		}
 		newModel.manualInput = false
-		newModel.inputBuffer = ""
+		newModel.textInput.SetValue("")
+		newModel.textInput.Blur()
 	case ViewSelectService:
 		newModel.currentView = ViewAWSConfig
 		newModel.selectedService = nil
@@ -699,8 +776,18 @@ func (m Model) navigateBack() Model {
 	case ViewSummary:
 		newModel.currentView = ViewConfirmation
 		newModel.summary = ""
+		newModel.textInput.Reset()
+		newModel.textInput.Blur()
 	case ViewExecutingAction:
 		newModel.currentView = ViewSummary
+		// When going back to summary, restore the previous comment and focus
+		newModel.textInput.SetValue(m.summary)
+		newModel.textInput.Focus()
+		if newModel.approveAction {
+			newModel.textInput.Placeholder = "Enter approval comment..."
+		} else {
+			newModel.textInput.Placeholder = "Enter rejection comment..."
+		}
 	}
 	newModel.updateTableForView()
 	return newModel

@@ -71,7 +71,7 @@ func DefaultStyles() Styles {
 		Align(lipgloss.Center)
 
 	ts.Selected = ts.Selected.
-		Foreground(darkGray). // Changed from white to dark gray
+		Foreground(darkGray).
 		Background(highlight).
 		Bold(true).
 		Padding(0, 1)
