@@ -1,5 +1,4 @@
-```
-             __                               __                           __               
+```bash             __                               __                           __               
             /  |                             /  |                         /  |              
    _______  $$ |   ______    __    __    ____$$ |   ______     ______    _$$ |_      ______  
   /       | $$ |  /      \  /  |  /  |  /    $$ |  /      \   /      \  / $$   |    /      \ 
@@ -7,7 +6,7 @@
  $$ |       $$ | $$ |  $$ | $$ |  $$ | $$ |  $$ | $$ |  $$ |  /    $$ |   $$ | __  $$    $$ |
  $$ \_____  $$ | $$ \__$$ | $$ \__$$ | $$ \__$$ | $$ \__$$ | /$$$$$$$ |   $$ |/  | $$$$$$$$/ 
  $$       | $$ | $$    $$/  $$    $$/  $$    $$ | $$    $$ | $$    $$ |   $$  $$/  $$       |
-   $$$$$$$/ $$/   $$$$$$/    $$$$$$/    $$$$$$$/   $$$$$$$ |  $$$$$$/      $$$$/    $$$$$$$/ 
+   $$$$$$$/ $$/   $$$$$$/    $$$$$$/    $$$$$$$/   $$$$$$$ |  $$$$$$/     $$$$/     $$$$$$$/ 
                                                   /  \__$$ |                              
                                                   $$    $$/                               
                                                    $$$$$$/                                
@@ -55,18 +54,18 @@ A seamless gateway to your cloud universe. Cloudgate is an elegant Terminal UI t
 
 ## Installation
 
-## Linux and MacOS
+### Linux and MacOS
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.sh)"
 ```
 
-## Windows
+### Windows
 
-Open PowerShell as administrator and run:
+Open PowerShell and run:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))
+powershell -ExecutionPolicy Bypass -Command "Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))"
 ```
 
 After installation, you can run Cloudgate using the `cg` command from anywhere in your terminal.
