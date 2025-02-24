@@ -22,7 +22,7 @@ Write-Host "$ORANGE
                                                    `$`$`$`$`$`$/                                
 $NC"
 
-Write-Host "Installing cloudgate..." -ForegroundColor Blue
+Write-Host "Installing cloudgate..."
 
 # Create installation directory
 $InstallDir = "$env:LOCALAPPDATA\cloudgate"
@@ -35,7 +35,7 @@ $binary = "cloudgate_windows_${arch}.exe"
 $LatestRelease = "https://github.com/HenryOwenz/cloudgate/releases/latest/download/$binary"
 $OutFile = "$InstallDir\cg.exe"
 
-Write-Host "Downloading latest release..." -ForegroundColor Blue
+Write-Host "Downloading latest release..."
 Invoke-WebRequest -Uri $LatestRelease -OutFile $OutFile
 
 # Add to PATH
@@ -48,5 +48,5 @@ if ($UserPath -notlike "*$InstallDir*") {
     )
 }
 
-Write-Host "Successfully installed cloudgate!" -ForegroundColor Green
+Write-Host "Successfully installed cloudgate!"
 Write-Host "Please restart your terminal to use the 'cg' command." 

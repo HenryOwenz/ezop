@@ -3,8 +3,6 @@
 # Colors for output
 # Orange text
 ORANGE='\033[38;5;208m'
-WHITE='\033[38;5;255m'
-# Reset all colors
 NC='\033[0m'
 
 # Display banner
@@ -21,8 +19,8 @@ echo -e "${ORANGE}
                                                   /  \\__\$\$ |                              
                                                   \$\$    \$\$/                               
                                                    \$\$\$\$\$\$/                                
+${NC}"
 
-"
 echo "Installing cloudgate..."
 
 # Determine installation directory
@@ -51,11 +49,13 @@ LATEST_RELEASE="https://github.com/HenryOwenz/cloudgate/releases/latest/download
 
 # Download the binary
 if command -v curl > /dev/null; then
+    echo "Downloading with curl..."
     curl -L "$LATEST_RELEASE" -o "$INSTALL_DIR/cg"
 elif command -v wget > /dev/null; then
+    echo "Downloading with wget..."
     wget -O "$INSTALL_DIR/cg" "$LATEST_RELEASE"
 else
-    echo -e "${RED}Error: Neither curl nor wget found. Please install either one and try again.${NC}"
+    echo "Error: Neither curl nor wget found. Please install either one and try again."
     exit 1
 fi
 
@@ -68,5 +68,5 @@ if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$HOME/.zshrc" 2>/dev/null || true
 fi
 
-echo -e "${GREEN}Successfully installed cloudgate!${NC}"
+echo "Successfully installed cloudgate!"
 echo "Please restart your terminal or run 'source ~/.bashrc' to use the 'cg' command." 
