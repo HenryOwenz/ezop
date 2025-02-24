@@ -1,3 +1,17 @@
+             __                               __                           __               
+            /  |                             /  |                         /  |              
+   _______  $$ |   ______    __    __    ____$$ |   ______     ______    _$$ |_      ______  
+  /       | $$ |  /      \  /  |  /  |  /    $$ |  /      \   /      \  / $$   |    /      \ 
+ /$$$$$$$/  $$ | /$$$$$$  | $$ |  $$ | /$$$$$$$ | /$$$$$$  |  $$$$$$  | $$$$$$/    /$$$$$$  |
+ $$ |       $$ | $$ |  $$ | $$ |  $$ | $$ |  $$ | $$ |  $$ |  /    $$ |   $$ | __  $$    $$ |
+ $$ \_____  $$ | $$ \__$$ | $$ \__$$ | $$ \__$$ | $$ \__$$ | /$$$$$$$ |   $$ |/  | $$$$$$$$/ 
+ $$       | $$ | $$    $$/  $$    $$/  $$    $$ | $$    $$ | $$    $$ |   $$  $$/  $$       |
+   $$$$$$$/ $$/   $$$$$$/    $$$$$$/    $$$$$$$/   $$$$$$$ |  $$$$$$/      $$$$/    $$$$$$$/ 
+                                                  /  \__$$ |                              
+                                                  $$    $$/                               
+                                                   $$$$$$/                                
+```
+
 # Cloudgate
 
 A seamless gateway to your cloud universe. Cloudgate is an elegant Terminal UI that reflects and unifies your multi-cloud operations across AWS, Azure, and GCP.
@@ -40,17 +54,21 @@ A seamless gateway to your cloud universe. Cloudgate is an elegant Terminal UI t
 
 ## Installation
 
+## Linux and MacOS
+
 ```bash
-# Clone the repository
-git clone https://github.com/HenryOwenz/cloudgate.git
-cd cloudgate
-
-# Build the project
-go build
-
-# Run Cloudgate
-./cloudgate
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.sh)"
 ```
+
+## Windows
+
+Open PowerShell as administrator and run:
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))
+```
+
+After installation, you can run Cloudgate using the `cg` command from anywhere in your terminal.
 
 ## Prerequisites
 
@@ -85,7 +103,7 @@ go build
 
 1. Launch Cloudgate:
    ```bash
-   ./cloudgate
+   cg
    ```
 
 2. Navigation:
