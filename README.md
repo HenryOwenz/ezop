@@ -65,7 +65,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/HenryOwenz/cloudgate/mai
 Open PowerShell and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))"
+Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))
 ```
 
 After installation, you can run Cloudgate using the `cg` command from anywhere in your terminal.
