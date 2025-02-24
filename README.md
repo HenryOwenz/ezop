@@ -1,55 +1,67 @@
 # ezop
 
-A user-friendly interactive CLI tool for managing cloud operations across multiple providers.
+A user-friendly interactive CLI tool for managing cloud operations across multiple providers, with a focus on AWS CodePipeline operations.
+
+## Features
+
+- 🎨 Beautiful terminal UI with:
+  - Color-coded elements for better visibility
+  - Dynamic context-aware navigation
+  - Responsive table layouts
+  - Interactive selection menus
+  - Loading spinners for async operations
+  - Clear error handling and display
+
+- 🔄 AWS CodePipeline Operations:
+  - View pipeline status and stages
+  - Manage manual approval actions
+  - Start pipeline executions
+  - View detailed stage information
+  - Real-time status updates
+
+- 🛠️ AWS Configuration:
+  - Automatic AWS profile detection
+  - Region selection
+  - Profile-based authentication
+  - Support for multiple AWS profiles
+
+- 🎯 Operation Categories:
+  - Workflows
+    - Pipeline Approvals
+    - Pipeline Status
+    - Start Pipeline Execution
+  - Operations (Coming Soon)
+
+- 🔒 Safety Features:
+  - Multi-step confirmation process
+  - Clear context display
+  - Operation preview
+  - Cancel options at every step
+  - Error state recovery
 
 ## Installation
 
 ```bash
-# Coming soon. For now you can git clone and build the go project locally.
+# Clone the repository
+git clone https://github.com/HenryOwenz/ezop.git
+cd ezop
+
+# Build the project
+go build
+
+# Run the application
+./ezop
 ```
 
 ## Prerequisites
 
-- Cloud provider credentials configured appropriately
-- For AWS: AWS credentials configured in your AWS config/credentials files
-- For Azure: Coming soon
-- For GCP: Coming soon
+- Go 1.21 or later
+- AWS credentials configured in `~/.aws/credentials` or `~/.aws/config`
+- Required AWS IAM permissions (see below)
 
-## Usage
+## Required AWS Permissions
 
-Simply run:
-```bash
-ezop
-```
-
-The interactive interface will guide you through:
-1. Selecting your cloud provider
-2. Choosing the service and operation
-3. Configuring provider-specific settings
-4. Managing your cloud operations with a beautiful terminal UI
-
-## Features
-
-The interactive interface provides:
-- Beautiful terminal UI with color-coded elements
-- Multi-cloud provider support
-  - AWS (Available)
-  - Azure (Coming Soon)
-  - GCP (Coming Soon)
-- Provider-specific features:
-  - AWS:
-    - CodePipeline manual approval management
-    - More services coming soon
-  - Azure: Coming soon
-  - GCP: Coming soon
-- Interactive selection and management
-- Guided workflow with clear steps
-- Confirmation steps for safety
-
-## Required Permissions
-
-### AWS
-For AWS CodePipeline operations, the following IAM permissions are required:
+The following IAM permissions are required for AWS CodePipeline operations:
 
 ```json
 {
@@ -61,7 +73,8 @@ For AWS CodePipeline operations, the following IAM permissions are required:
                 "codepipeline:ListActionExecutions",
                 "codepipeline:PutApprovalResult",
                 "codepipeline:ListPipelines",
-                "codepipeline:GetPipelineState"
+                "codepipeline:GetPipelineState",
+                "codepipeline:StartPipelineExecution"
             ],
             "Resource": "arn:aws:codepipeline:*:*:*"
         }
@@ -69,29 +82,72 @@ For AWS CodePipeline operations, the following IAM permissions are required:
 }
 ```
 
-### Azure
-Coming soon
+## Usage Guide
 
-### GCP
-Coming soon
+1. Launch the application:
+   ```bash
+   ./ezop
+   ```
+
+2. Navigation:
+   - Use ↑/↓ arrows to navigate
+   - Press Enter to select
+   - Press Esc or - to go back
+   - Press q to quit
+   - Press Tab to toggle manual input (where available)
+
+3. AWS Configuration:
+   - Select AWS profile from the list or enter manually
+   - Choose AWS region from the list or enter manually
+
+4. Operations:
+   - Select AWS service (currently CodePipeline)
+   - Choose operation category
+   - Select specific operation
+   - Follow the interactive prompts
+
+## Key Bindings
+
+- `↑/↓`: Navigate through options
+- `Enter`: Select/Confirm
+- `Esc/-`: Go back/Cancel
+- `Tab`: Toggle manual input (where available)
+- `q`: Quit application
+- `Ctrl+c`: Force quit
+
+## Future Enhancements
+
+- Additional AWS Services support
+- Azure integration
+- GCP integration
+- More CodePipeline operations
+- Enhanced pipeline visualization
+- Custom theme support
+- Configuration file support
+- Pipeline execution history
+- Detailed stage information
+- Cross-region operation support
 
 ## Development
 
-To build from source:
+The project structure follows Go best practices:
 
-```bash
-git clone https://github.com/HenryOwenz/ezop.git
-cd ezop
-go build
+```
+.
+├── internal/
+│   ├── aws/          # AWS-specific functionality
+│   └── ui/           # Terminal UI components
+│       ├── constants/  # UI constants and enums
+│       ├── model.go    # Main UI model and logic
+│       └── styles.go   # UI styling definitions
+├── main.go           # Application entry point
+└── README.md         # This file
 ```
 
-## Safety Features
+## Contributing
 
-- **Multi-step Workflow**: Clear step-by-step process prevents accidental operations
-- **Provider Selection**: Choose from available cloud providers
-- **Service Selection**: Select from available services for each provider
-- **Operation Selection**: Choose specific operations within each service
-- **Confirmation Steps**: Verify your actions before they're executed
-- **Clear Context**: Always shows which provider, service, and operation you're working with
-- **Color-Coded UI**: Important information and actions are visually distinct
-- **Error Handling**: Clear error messages when something goes wrong 
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 
