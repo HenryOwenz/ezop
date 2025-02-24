@@ -313,3 +313,28 @@ func (p *Provider) getPipelineStatus(ctx context.Context, pipeline types.Pipelin
 
 	return status, nil
 }
+
+// StartPipelineExecution starts a pipeline execution with optional source revision
+func (p *Provider) StartPipelineExecution(ctx context.Context, pipelineName string, commitID string) error {
+	input := &codepipeline.StartPipelineExecutionInput{
+		Name: aws.String(pipelineName),
+	}
+
+	// Only add source revision if a specific commitID is provided
+	if commitID != "" {
+		input.SourceRevisions = []types.SourceRevisionOverride{
+			{
+				ActionName:    aws.String("Source"), // Assuming standard Source action name
+				RevisionType:  types.SourceRevisionTypeCommitId,
+				RevisionValue: aws.String(commitID),
+			},
+		}
+	}
+
+	_, err := p.client.StartPipelineExecution(ctx, input)
+	if err != nil {
+		return fmt.Errorf("failed to start pipeline execution: %w", err)
+	}
+
+	return nil
+}

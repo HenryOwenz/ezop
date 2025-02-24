@@ -40,7 +40,8 @@ type (
 		provider  *aws.Provider
 		pipelines []aws.PipelineStatus
 	}
-	approvalResultMsg struct{ err error }
+	approvalResultMsg    struct{ err error }
+	pipelineExecutionMsg struct{ err error }
 )
 
 // Model represents the application state
@@ -112,7 +113,7 @@ type Operation struct {
 }
 
 // New creates and initializes a new Model
-func New() Model {
+func New() *Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#DD6B20", Dark: "#ED8936"}).Italic(true)
@@ -128,7 +129,7 @@ func New() Model {
 	)
 	t.SetStyles(DefaultStyles().Table)
 
-	m := Model{
+	m := &Model{
 		spinner:     s,
 		textInput:   ti,
 		table:       t,
@@ -160,6 +161,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleApprovals(msg)
 	case approvalResultMsg:
 		return m.handleApprovalResult(msg)
+	case pipelineExecutionMsg:
+		return m.handlePipelineExecution(msg)
 	case spinner.TickMsg:
 		return m.handleSpinnerTick(msg)
 	case tea.KeyMsg:
@@ -200,6 +203,22 @@ func (m *Model) handleApprovalResult(msg approvalResultMsg) (tea.Model, tea.Cmd)
 	newModel.currentView = ViewSelectCategory
 	newModel.resetApprovalState()
 	// Clear text input
+	newModel.resetTextInput()
+	newModel.updateTableForView()
+	return &newModel, nil
+}
+
+func (m *Model) handlePipelineExecution(msg pipelineExecutionMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		return m, func() tea.Msg {
+			return errMsg{msg.err}
+		}
+	}
+	newModel := *m
+	newModel.isLoading = false
+	newModel.currentView = ViewSelectCategory
+	newModel.selectedPipeline = nil
+	newModel.selectedOperation = nil
 	newModel.resetTextInput()
 	newModel.updateTableForView()
 	return &newModel, nil
@@ -257,19 +276,30 @@ func (m *Model) handleKeyPressInTextInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "esc":
 		newModel := *m
-		if m.currentView == ViewSummary {
-			return newModel.navigateBack(), nil
+		if m.currentView == ViewSummary && m.selectedApproval != nil {
+			// For approval summary, go back to confirmation
+			newModel.currentView = ViewConfirmation
+			newModel.resetTextInput()
+		} else {
+			newModel.manualInput = false
 		}
-		newModel.manualInput = false
-		newModel.resetTextInput()
+		newModel.updateTableForView()
 		return &newModel, nil
 	case "enter":
 		if m.textInput.Value() != "" {
 			newModel := *m
 			if m.currentView == ViewSummary {
 				newModel.summary = m.textInput.Value()
-				newModel.textInput.Blur()
-				newModel.currentView = ViewExecutingAction
+				if m.selectedApproval != nil {
+					// For approval summary, move to execution
+					newModel.currentView = ViewExecutingAction
+					newModel.textInput.Blur()
+				} else {
+					// For pipeline start summary
+					newModel.textInput.Blur()
+					newModel.manualInput = false
+					newModel.currentView = ViewExecutingAction
+				}
 				newModel.updateTableForView()
 				return &newModel, nil
 			} else if m.awsProfile == "" {
@@ -300,7 +330,7 @@ func (m *Model) handleKeyPressInNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) 
 			return m.navigateBack(), nil
 		}
 	case "tab":
-		if m.currentView == ViewAWSConfig {
+		if m.currentView == ViewAWSConfig || m.currentView == ViewSummary {
 			newModel := *m
 			newModel.manualInput = !m.manualInput
 			if newModel.manualInput {
@@ -351,14 +381,17 @@ func (m *Model) View() string {
 		content[2] = m.spinner.View()
 	}
 
-	// Replace content with table view for list-based views
-	if !m.manualInput && m.currentView != ViewSummary {
-		content[3] = m.table.View()
-	}
-
-	// Add input field for manual input views
-	if m.manualInput || m.currentView == ViewSummary {
+	// For Summary view with approvals, always show text input
+	if m.currentView == ViewSummary && m.selectedApproval != nil {
 		content[3] = m.textInput.View()
+	} else {
+		// For other views, follow normal logic
+		if !m.manualInput {
+			content[3] = m.table.View()
+		}
+		if m.manualInput {
+			content[3] = m.textInput.View()
+		}
 	}
 
 	// Add help text
@@ -391,6 +424,25 @@ func (m *Model) handleEnter() (tea.Model, tea.Cmd) {
 	case ViewConfirmation:
 		return m.handleConfirmationSelection()
 	case ViewSummary:
+		if !m.manualInput {
+			if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+				if selected := m.table.SelectedRow(); len(selected) > 0 {
+					newModel := *m
+					switch selected[0] {
+					case "Latest Commit":
+						newModel.currentView = ViewExecutingAction
+						newModel.summary = "" // Empty string means use latest commit
+						newModel.updateTableForView()
+						return &newModel, nil
+					case "Manual Input":
+						newModel.manualInput = true
+						newModel.textInput.Focus()
+						newModel.textInput.Placeholder = "Enter commit ID"
+						return &newModel, nil
+					}
+				}
+			}
+		}
 		return m.handleSummaryConfirmation()
 	case ViewExecutingAction:
 		return m.handleExecutionSelection()
@@ -399,14 +451,17 @@ func (m *Model) handleEnter() (tea.Model, tea.Cmd) {
 			newModel := *m
 			for _, pipeline := range m.pipelines {
 				if pipeline.Name == selected[0] {
+					if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+						newModel.currentView = ViewExecutingAction
+						newModel.selectedPipeline = &pipeline
+						newModel.updateTableForView()
+						return &newModel, nil
+					}
 					newModel.selectedPipeline = &pipeline
-					break
+					newModel.currentView = ViewPipelineStages
+					newModel.updateTableForView()
+					return &newModel, nil
 				}
-			}
-			if newModel.selectedPipeline != nil {
-				newModel.currentView = ViewPipelineStages
-				newModel.updateTableForView()
-				return &newModel, nil
 			}
 		}
 	}
@@ -522,6 +577,16 @@ func (m *Model) handleOperationSelection() (tea.Model, tea.Cmd) {
 				newModel.spinner.Tick,
 				m.initializePipelineStatus,
 			)
+		case "Start Pipeline":
+			newModel.selectedOperation = &Operation{
+				Name:        selected[0],
+				Description: selected[1],
+			}
+			newModel.isLoading = true
+			return &newModel, tea.Batch(
+				newModel.spinner.Tick,
+				m.initializePipelineStatus,
+			)
 		}
 	}
 	return m, nil
@@ -565,9 +630,24 @@ func (m *Model) handleConfirmationSelection() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleSummaryConfirmation() (tea.Model, tea.Cmd) {
+	if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+		if m.selectedPipeline == nil {
+			return m, nil
+		}
+		newModel := *m
+		newModel.currentView = ViewExecutingAction
+		newModel.updateTableForView()
+		return &newModel, nil
+	}
+
+	if m.selectedApproval == nil {
+		return m, nil
+	}
+
 	newModel := *m
 	newModel.currentView = ViewExecutingAction
 	newModel.isLoading = true
+	newModel.updateTableForView()
 
 	return &newModel, tea.Batch(
 		m.spinner.Tick,
@@ -592,8 +672,31 @@ func (m *Model) handleExecutionSelection() (tea.Model, tea.Cmd) {
 		case "Execute":
 			newModel := *m
 			newModel.isLoading = true
-			// Clear text input
 			newModel.resetTextInput()
+
+			if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+				if m.selectedPipeline == nil {
+					return m, nil
+				}
+				return &newModel, tea.Batch(
+					newModel.spinner.Tick,
+					func() tea.Msg {
+						err := m.provider.StartPipelineExecution(
+							context.Background(),
+							m.selectedPipeline.Name,
+							"", // Always use latest commit
+						)
+						if err != nil {
+							return errMsg{err}
+						}
+						return pipelineExecutionMsg{}
+					},
+				)
+			}
+
+			if m.selectedApproval == nil {
+				return m, nil
+			}
 			return &newModel, tea.Batch(
 				newModel.spinner.Tick,
 				func() tea.Msg {
@@ -606,7 +709,6 @@ func (m *Model) handleExecutionSelection() (tea.Model, tea.Cmd) {
 					if err != nil {
 						return errMsg{err}
 					}
-					// Return empty approvalResultMsg to trigger state transition
 					return approvalResultMsg{}
 				},
 			)
@@ -614,7 +716,6 @@ func (m *Model) handleExecutionSelection() (tea.Model, tea.Cmd) {
 			newModel := *m
 			newModel.currentView = ViewSelectCategory
 			newModel.resetApprovalState()
-			// Clear text input
 			newModel.resetTextInput()
 			newModel.updateTableForView()
 			return &newModel, nil
@@ -728,6 +829,11 @@ func (m *Model) getColumnsForView() []table.Column {
 			{Title: "Status", Width: 20},
 			{Title: "Last Updated", Width: 20},
 		}
+	case ViewSummary:
+		return []table.Column{
+			{Title: "Type", Width: 30},
+			{Title: "Value", Width: 50},
+		}
 	default:
 		return []table.Column{}
 	}
@@ -769,6 +875,7 @@ func (m *Model) getRowsForView() []table.Row {
 			return []table.Row{
 				{"Pipeline Approvals", "Manage Pipeline Approvals"},
 				{"Pipeline Status", "View Pipeline Status"},
+				{"Start Pipeline", "Trigger Pipeline Execution"},
 			}
 		}
 		return []table.Row{}
@@ -788,6 +895,12 @@ func (m *Model) getRowsForView() []table.Row {
 			{"Reject", "Reject the pipeline stage"},
 		}
 	case ViewExecutingAction:
+		if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+			return []table.Row{
+				{"Execute", "Start pipeline with latest commit"},
+				{"Cancel", "Cancel and return to main menu"},
+			}
+		}
 		action := "approve"
 		if !m.approveAction {
 			action = "reject"
@@ -821,6 +934,18 @@ func (m *Model) getRowsForView() []table.Row {
 			}
 		}
 		return rows
+	case ViewSummary:
+		if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+			if m.selectedPipeline == nil {
+				return []table.Row{}
+			}
+			return []table.Row{
+				{"Latest Commit", "Use latest commit from source"},
+				{"Manual Input", "Enter specific commit ID"},
+			}
+		}
+		// For approval summary, don't show any rows since we're showing text input
+		return []table.Row{}
 	default:
 		return []table.Row{}
 	}
@@ -861,14 +986,21 @@ func (m *Model) navigateBack() *Model {
 		newModel.summary = ""
 		newModel.resetTextInput()
 	case ViewExecutingAction:
-		newModel.currentView = ViewSummary
-		// When going back to summary, restore the previous comment and focus
-		newModel.textInput.SetValue(m.summary)
-		newModel.textInput.Focus()
-		if newModel.approveAction {
-			newModel.textInput.Placeholder = "Enter approval comment..."
+		if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+			// For pipeline start flow, go back to pipeline selection
+			newModel.currentView = ViewPipelineStatus
+			newModel.selectedPipeline = nil
 		} else {
-			newModel.textInput.Placeholder = "Enter rejection comment..."
+			// For approval flow, go back to summary
+			newModel.currentView = ViewSummary
+			// When going back to summary, restore the previous comment and focus
+			newModel.textInput.SetValue(m.summary)
+			newModel.textInput.Focus()
+			if newModel.approveAction {
+				newModel.textInput.Placeholder = "Enter approval comment..."
+			} else {
+				newModel.textInput.Placeholder = "Enter rejection comment..."
+			}
 		}
 	case ViewPipelineStages:
 		newModel.currentView = ViewPipelineStatus
@@ -919,9 +1051,15 @@ func (m *Model) getContextText() string {
 			m.awsProfile,
 			m.awsRegion)
 	case ViewSelectCategory:
+		if m.selectedService == nil {
+			return ""
+		}
 		return fmt.Sprintf("Service: %s",
 			m.selectedService.Name)
 	case ViewSelectOperation:
+		if m.selectedService == nil || m.selectedCategory == nil {
+			return ""
+		}
 		return fmt.Sprintf("Service: %s\nCategory: %s",
 			m.selectedService.Name,
 			m.selectedCategory.Name)
@@ -930,11 +1068,35 @@ func (m *Model) getContextText() string {
 			m.awsProfile,
 			m.awsRegion)
 	case ViewConfirmation, ViewSummary:
+		if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+			if m.selectedPipeline == nil {
+				return ""
+			}
+			return fmt.Sprintf("Profile: %s\nRegion: %s\nPipeline: %s",
+				m.awsProfile,
+				m.awsRegion,
+				m.selectedPipeline.Name)
+		}
+		if m.selectedApproval == nil {
+			return ""
+		}
 		return fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
 			m.selectedApproval.PipelineName,
 			m.selectedApproval.StageName,
 			m.selectedApproval.ActionName)
 	case ViewExecutingAction:
+		if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+			if m.selectedPipeline == nil {
+				return ""
+			}
+			return fmt.Sprintf("Profile: %s\nRegion: %s\nPipeline: %s\nRevisionID: Latest commit",
+				m.awsProfile,
+				m.awsRegion,
+				m.selectedPipeline.Name)
+		}
+		if m.selectedApproval == nil {
+			return ""
+		}
 		return fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s\nComment: %s",
 			m.selectedApproval.PipelineName,
 			m.selectedApproval.StageName,
@@ -945,6 +1107,9 @@ func (m *Model) getContextText() string {
 			m.awsProfile,
 			m.awsRegion)
 	case ViewPipelineStages:
+		if m.selectedPipeline == nil {
+			return ""
+		}
 		return fmt.Sprintf("Profile: %s\nRegion: %s\nPipeline: %s",
 			m.awsProfile,
 			m.awsRegion,
@@ -996,8 +1161,10 @@ func (m *Model) getHelpText() string {
 		return "enter: confirm • esc: cancel • ctrl+c: quit"
 	case m.currentView == ViewAWSConfig:
 		return "↑/↓: navigate • enter: select • tab: toggle input • esc: back • q: quit"
+	case m.currentView == ViewSummary && m.manualInput:
+		return "enter: confirm • esc: cancel • ctrl+c: quit"
 	case m.currentView == ViewSummary:
-		return "enter: confirm • esc: back • ctrl+c: quit"
+		return "↑/↓: navigate • enter: select • tab: toggle input • esc: back • q: quit"
 	default:
 		return "↑/↓: navigate • enter: select • esc: back • q: quit"
 	}

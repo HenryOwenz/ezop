@@ -18,8 +18,7 @@ func main() {
 	}
 
 	// Create and run the program
-	m := ui.New()
-	p := tea.NewProgram(&m)
+	p := tea.NewProgram(ui.New())
 
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
