@@ -1,67 +1,66 @@
-# ezop
+# Cloudgate
 
-A user-friendly interactive CLI tool for managing cloud operations across multiple providers, with a focus on AWS CodePipeline operations.
+A seamless gateway to your cloud universe. Cloudgate is an elegant Terminal UI that reflects and unifies your multi-cloud operations across AWS, Azure, and GCP.
+
+> *Like its namesake sculpture that reflects Chicago's skyline in liquid mercury, Cloudgate provides a fluid, unified view into your cloud landscape.*
 
 ## Features
 
-- 🎨 Beautiful terminal UI with:
-  - Color-coded elements for better visibility
-  - Dynamic context-aware navigation
-  - Responsive table layouts
-  - Interactive selection menus
-  - Loading spinners for async operations
-  - Clear error handling and display
+- 🪞 **Unified Reflection** - View and manage multiple cloud providers through a single, elegant interface
+  - AWS integration
+  - Azure integration (Coming Soon)
+  - GCP integration (Coming Soon)
 
-- 🔄 AWS CodePipeline Operations:
-  - View pipeline status and stages
-  - Manage manual approval actions
-  - Start pipeline executions
-  - View detailed stage information
+- 🌐 **Multi-Account Management**
+  - Seamless switching between accounts
+  - Profile-based authentication (AWS)
+  - Cross-account operations (coming soon)
+
+- 🎨 **Beautiful Terminal UI**
+  - Fluid navigation
+  - Context-aware menus
   - Real-time status updates
+  - Responsive layouts
+  - Interactive selections
+  - Loading indicators
 
-- 🛠️ AWS Configuration:
-  - Automatic AWS profile detection
-  - Region selection
-  - Profile-based authentication
-  - Support for multiple AWS profiles
+- 🔄 **Cloud Operations**
+  - Pipeline management
+  - Approval workflows
+  - Status monitoring
+  - Resource operations
+  - Real-time updates
 
-- 🎯 Operation Categories:
-  - Workflows
-    - Pipeline Approvals
-    - Pipeline Status
-    - Start Pipeline Execution
-  - Operations (Coming Soon)
-
-- 🔒 Safety Features:
-  - Multi-step confirmation process
-  - Clear context display
-  - Operation preview
-  - Cancel options at every step
-  - Error state recovery
+- 🛡️ **Safety Features**
+  - Clear operation preview
+  - Multi-step confirmations
+  - Easy cancellation
+  - Error recovery
+  - Context awareness
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/HenryOwenz/ezop.git
-cd ezop
+git clone https://github.com/HenryOwenz/cloudgate.git
+cd cloudgate
 
 # Build the project
 go build
 
-# Run the application
-./ezop
+# Run Cloudgate
+./cloudgate
 ```
 
 ## Prerequisites
 
 - Go 1.21 or later
-- AWS credentials configured in `~/.aws/credentials` or `~/.aws/config`
-- Required AWS IAM permissions (see below)
+- Cloud provider credentials configured:
+  - AWS: `~/.aws/credentials` or `~/.aws/config`
+  - Azure: Coming soon
+  - GCP: Coming soon
 
 ## Required AWS Permissions
-
-The following IAM permissions are required for AWS CodePipeline operations:
 
 ```json
 {
@@ -82,60 +81,63 @@ The following IAM permissions are required for AWS CodePipeline operations:
 }
 ```
 
-## Usage Guide
+## Usage
 
-1. Launch the application:
+1. Launch Cloudgate:
    ```bash
-   ./ezop
+   ./cloudgate
    ```
 
 2. Navigation:
-   - Use ↑/↓ arrows to navigate
-   - Press Enter to select
-   - Press Esc or - to go back
-   - Press q to quit
-   - Press Tab to toggle manual input (where available)
+   - ↑/↓: Navigate options
+   - Enter: Select
+   - Esc/-: Go back
+   - Tab: Toggle input (where available)
+   - q: Quit
 
-3. AWS Configuration:
-   - Select AWS profile from the list or enter manually
-   - Choose AWS region from the list or enter manually
+3. Provider Setup:
+   - Select cloud provider
+   - Choose account/profile
+   - Select region/location
+   - Access your services
 
 4. Operations:
-   - Select AWS service (currently CodePipeline)
-   - Choose operation category
+   - Choose service category
    - Select specific operation
-   - Follow the interactive prompts
+   - Follow interactive prompts
+   - Monitor progress
 
 ## Key Bindings
 
 - `↑/↓`: Navigate through options
 - `Enter`: Select/Confirm
 - `Esc/-`: Go back/Cancel
-- `Tab`: Toggle manual input (where available)
+- `Tab`: Toggle manual input
 - `q`: Quit application
 - `Ctrl+c`: Force quit
 
 ## Future Enhancements
 
-- Additional AWS Services support
 - Azure integration
-- GCP integration
-- More CodePipeline operations
+- GCP support
 - Enhanced pipeline visualization
-- Custom theme support
-- Configuration file support
-- Pipeline execution history
-- Detailed stage information
-- Cross-region operation support
+- Cross-provider operations
+- Resource management
+- Cost optimization
+- Security scanning
+- Custom themes
+- Configuration profiles
+- Operation history
+- Detailed analytics
 
-## Development
-
-The project structure follows Go best practices:
+## Project Structure
 
 ```
 .
 ├── internal/
-│   ├── aws/          # AWS-specific functionality
+│   ├── aws/          # AWS provider operations
+│   ├── azure/        # Azure operations (coming soon)
+│   ├── gcp/          # GCP operations (coming soon)
 │   └── ui/           # Terminal UI components
 │       ├── constants/  # UI constants and enums
 │       ├── model.go    # Main UI model and logic
@@ -146,8 +148,12 @@ The project structure follows Go best practices:
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Feel free to submit a Pull Request.
+
+## The Name
+
+Cloudgate is inspired by the famous Cloud Gate sculpture in Chicago, known for its liquid mercury surface that reflects and transforms the city's skyline. Similarly, our tool provides a reflective interface that unifies and transforms how you interact with multiple cloud providers.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
