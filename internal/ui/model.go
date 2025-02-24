@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/HenryOwenz/ezop/v2/internal/aws"
+	"github.com/HenryOwenz/cloudgate/internal/aws"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"

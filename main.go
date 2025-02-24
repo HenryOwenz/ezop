@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/HenryOwenz/ezop/v2/internal/ui"
+	"github.com/HenryOwenz/cloudgate/internal/ui"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

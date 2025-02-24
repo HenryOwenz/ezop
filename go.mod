@@ -1,4 +1,4 @@
-module github.com/HenryOwenz/ezop/v2
+module github.com/HenryOwenz/cloudgate
 
 go 1.21
 
