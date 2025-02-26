@@ -15,4 +15,7 @@ const (
 	ViewConfirmation
 	ViewSummary
 	ViewExecutingAction
+	ViewError
+	ViewSuccess
+	ViewHelp
 )

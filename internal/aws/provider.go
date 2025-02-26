@@ -289,7 +289,7 @@ func (p *Provider) getPipelineStatus(ctx context.Context, pipeline types.Pipelin
 		lastUpdated := "N/A"
 		if stage.LatestExecution != nil {
 			stageStatus = string(stage.LatestExecution.Status)
-			if stage.ActionStates != nil && len(stage.ActionStates) > 0 {
+			if len(stage.ActionStates) > 0 {
 				// Find the most recent action update time
 				var latestTime *time.Time
 				for _, action := range stage.ActionStates {

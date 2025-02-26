@@ -1,16 +1,17 @@
-package ui
+package view
 
 import (
 	"fmt"
-	
+
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
+	"github.com/HenryOwenz/cloudgate/internal/ui/core"
 	"github.com/charmbracelet/bubbles/table"
 )
 
-// updateTableForView updates the table model based on the current view
-func (m *Model) updateTableForView() {
-	columns := m.getColumnsForView()
-	rows := m.getRowsForView()
+// UpdateTableForView updates the table model based on the current view
+func UpdateTableForView(m *core.Model) {
+	columns := getColumnsForView(m)
+	rows := getRowsForView(m)
 
 	t := table.New(
 		table.WithColumns(columns),
@@ -19,20 +20,20 @@ func (m *Model) updateTableForView() {
 		table.WithHeight(6),
 	)
 
-	t.SetStyles(m.styles.Table)
-	m.table = t
+	t.SetStyles(m.Styles.Table)
+	m.Table = t
 }
 
 // getColumnsForView returns the appropriate columns for the current view
-func (m *Model) getColumnsForView() []table.Column {
-	switch m.currentView {
+func getColumnsForView(m *core.Model) []table.Column {
+	switch m.CurrentView {
 	case constants.ViewProviders:
 		return []table.Column{
 			{Title: "Provider", Width: 30},
 			{Title: "Description", Width: 50},
 		}
 	case constants.ViewAWSConfig:
-		if m.awsProfile == "" {
+		if m.AwsProfile == "" {
 			return []table.Column{{Title: "Profile", Width: 30}}
 		}
 		return []table.Column{{Title: "Region", Width: 30}}
@@ -89,8 +90,8 @@ func (m *Model) getColumnsForView() []table.Column {
 }
 
 // getRowsForView returns the appropriate rows for the current view
-func (m *Model) getRowsForView() []table.Row {
-	switch m.currentView {
+func getRowsForView(m *core.Model) []table.Row {
+	switch m.CurrentView {
 	case constants.ViewProviders:
 		return []table.Row{
 			{"Amazon Web Services", "AWS Cloud Services"},
@@ -98,16 +99,18 @@ func (m *Model) getRowsForView() []table.Row {
 			{"Google Cloud Platform (Coming Soon)", "Google Cloud Services"},
 		}
 	case constants.ViewAWSConfig:
-		if m.awsProfile == "" {
-			rows := make([]table.Row, len(m.profiles))
-			for i, profile := range m.profiles {
-				rows[i] = table.Row{profile}
+		if m.AwsProfile == "" {
+			rows := make([]table.Row, len(m.Profiles)+1)
+			rows[0] = table.Row{"Manual Entry"}
+			for i, profile := range m.Profiles {
+				rows[i+1] = table.Row{profile}
 			}
 			return rows
 		}
-		rows := make([]table.Row, len(m.regions))
-		for i, region := range m.regions {
-			rows[i] = table.Row{region}
+		rows := make([]table.Row, len(m.Regions)+1)
+		rows[0] = table.Row{"Manual Entry"}
+		for i, region := range m.Regions {
+			rows[i+1] = table.Row{region}
 		}
 		return rows
 	case constants.ViewSelectService:
@@ -120,7 +123,7 @@ func (m *Model) getRowsForView() []table.Row {
 			{"Operations (Coming Soon)", "Service Operations"},
 		}
 	case constants.ViewSelectOperation:
-		if m.selectedCategory != nil && m.selectedCategory.Name == "Workflows" {
+		if m.SelectedCategory != nil && m.SelectedCategory.Name == "Workflows" {
 			return []table.Row{
 				{"Pipeline Approvals", "Manage Pipeline Approvals"},
 				{"Pipeline Status", "View Pipeline Status"},
@@ -129,8 +132,8 @@ func (m *Model) getRowsForView() []table.Row {
 		}
 		return []table.Row{}
 	case constants.ViewApprovals:
-		rows := make([]table.Row, len(m.approvals))
-		for i, approval := range m.approvals {
+		rows := make([]table.Row, len(m.Approvals))
+		for i, approval := range m.Approvals {
 			rows[i] = table.Row{
 				approval.PipelineName,
 				approval.StageName,
@@ -144,14 +147,14 @@ func (m *Model) getRowsForView() []table.Row {
 			{"Reject", "Reject the pipeline stage"},
 		}
 	case constants.ViewExecutingAction:
-		if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
+		if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
 			return []table.Row{
 				{"Execute", "Start pipeline with latest commit"},
 				{"Cancel", "Cancel and return to main menu"},
 			}
 		}
 		action := "approve"
-		if !m.approveAction {
+		if !m.ApproveAction {
 			action = "reject"
 		}
 		return []table.Row{
@@ -159,11 +162,11 @@ func (m *Model) getRowsForView() []table.Row {
 			{"Cancel", "Cancel and return to main menu"},
 		}
 	case constants.ViewPipelineStatus:
-		if m.pipelines == nil {
+		if m.Pipelines == nil {
 			return []table.Row{}
 		}
-		rows := make([]table.Row, len(m.pipelines))
-		for i, pipeline := range m.pipelines {
+		rows := make([]table.Row, len(m.Pipelines))
+		for i, pipeline := range m.Pipelines {
 			rows[i] = table.Row{
 				pipeline.Name,
 				fmt.Sprintf("%d stages", len(pipeline.Stages)),
@@ -171,11 +174,11 @@ func (m *Model) getRowsForView() []table.Row {
 		}
 		return rows
 	case constants.ViewPipelineStages:
-		if m.selectedPipeline == nil {
+		if m.SelectedPipeline == nil {
 			return []table.Row{}
 		}
-		rows := make([]table.Row, len(m.selectedPipeline.Stages))
-		for i, stage := range m.selectedPipeline.Stages {
+		rows := make([]table.Row, len(m.SelectedPipeline.Stages))
+		for i, stage := range m.SelectedPipeline.Stages {
 			rows[i] = table.Row{
 				stage.Name,
 				stage.Status,
@@ -184,8 +187,8 @@ func (m *Model) getRowsForView() []table.Row {
 		}
 		return rows
 	case constants.ViewSummary:
-		if m.selectedOperation != nil && m.selectedOperation.Name == "Start Pipeline" {
-			if m.selectedPipeline == nil {
+		if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
+			if m.SelectedPipeline == nil {
 				return []table.Row{}
 			}
 			return []table.Row{
@@ -198,4 +201,4 @@ func (m *Model) getRowsForView() []table.Row {
 	default:
 		return []table.Row{}
 	}
-} 
+}

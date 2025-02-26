@@ -1,4 +1,4 @@
-package ui
+package core
 
 import (
 	"github.com/HenryOwenz/cloudgate/internal/aws"
@@ -29,15 +29,15 @@ type Operation struct {
 
 // Message types for internal communication
 type (
-	errMsg       struct{ err error }
-	approvalsMsg struct {
-		provider  *aws.Provider
-		approvals []aws.ApprovalAction
+	ErrMsg       struct{ Err error }
+	ApprovalsMsg struct {
+		Provider  *aws.Provider
+		Approvals []aws.ApprovalAction
 	}
-	pipelineStatusMsg struct {
-		provider  *aws.Provider
-		pipelines []aws.PipelineStatus
+	PipelineStatusMsg struct {
+		Provider  *aws.Provider
+		Pipelines []aws.PipelineStatus
 	}
-	approvalResultMsg    struct{ err error }
-	pipelineExecutionMsg struct{ err error }
-) 
+	ApprovalResultMsg    struct{ Err error }
+	PipelineExecutionMsg struct{ Err error }
+)
