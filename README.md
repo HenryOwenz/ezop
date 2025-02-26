@@ -52,7 +52,7 @@ A seamless gateway to your cloud universe. Cloudgate is an elegant Terminal UI t
   - Error recovery
   - Context awareness
 
-## Installation
+## Installation / Upgrade
 
 ### Linux and MacOS
 
@@ -87,13 +87,10 @@ After installation, you can run Cloudgate using the `cg` command from anywhere i
         {
             "Effect": "Allow",
             "Action": [
-                "codepipeline:ListActionExecutions",
-                "codepipeline:PutApprovalResult",
-                "codepipeline:ListPipelines",
-                "codepipeline:GetPipelineState",
-                "codepipeline:StartPipelineExecution"
+                "<service>:<action>",
+                
             ],
-            "Resource": "arn:aws:codepipeline:*:*:*"
+            "Resource": "arn:aws:<service>:*:*:*"
         }
     ]
 }
@@ -147,22 +144,6 @@ After installation, you can run Cloudgate using the `cg` command from anywhere i
 - Configuration profiles
 - Operation history
 - Detailed analytics
-
-## Project Structure
-
-```
-.
-├── internal/
-│   ├── aws/          # AWS provider operations
-│   ├── azure/        # Azure operations (coming soon)
-│   ├── gcp/          # GCP operations (coming soon)
-│   └── ui/           # Terminal UI components
-│       ├── constants/  # UI constants and enums
-│       ├── model.go    # Main UI model and logic
-│       └── styles.go   # UI styling definitions
-├── main.go           # Application entry point
-└── README.md         # This file
-```
 
 ## Contributing
 
