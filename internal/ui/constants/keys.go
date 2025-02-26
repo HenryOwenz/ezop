@@ -16,4 +16,9 @@ const (
 	KeySpace     = "space"
 	KeyH         = "h"
 	KeyQ         = "q"
+
+	// Alternative keys
+	KeyAltUp   = "k"
+	KeyAltDown = "j"
+	KeyAltBack = "-"
 )

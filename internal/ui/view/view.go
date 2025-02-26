@@ -16,7 +16,7 @@ func Render(m *core.Model) string {
 				lipgloss.Left,
 				m.Styles.Error.Render("Error: "+m.Err.Error()),
 				"\n",
-				m.Styles.Help.Render("q: quit • -: back"),
+				m.Styles.Help.Render(fmt.Sprintf("%s: quit • %s: back", constants.KeyQ, constants.KeyAltBack)),
 			),
 		)
 	}
@@ -187,16 +187,16 @@ func getTitleText(m *core.Model) string {
 func getHelpText(m *core.Model) string {
 	switch {
 	case m.CurrentView == constants.ViewProviders:
-		return "↑/↓: navigate • enter: select • q: quit"
+		return fmt.Sprintf("↑/↓: navigate • %s: select • %s: quit", constants.KeyEnter, constants.KeyQ)
 	case m.CurrentView == constants.ViewAWSConfig && m.ManualInput:
-		return "enter: confirm • esc: cancel • ctrl+c: quit"
+		return fmt.Sprintf("%s: confirm • %s: cancel • %s: quit", constants.KeyEnter, constants.KeyEsc, constants.KeyCtrlC)
 	case m.CurrentView == constants.ViewAWSConfig:
-		return "↑/↓: navigate • enter: select • esc: back • q: quit"
+		return fmt.Sprintf("↑/↓: navigate • %s: select • %s: back • %s: quit", constants.KeyEnter, constants.KeyEsc, constants.KeyQ)
 	case m.CurrentView == constants.ViewSummary && m.ManualInput:
-		return "enter: confirm • esc: cancel • ctrl+c: quit"
+		return fmt.Sprintf("%s: confirm • %s: cancel • %s: quit", constants.KeyEnter, constants.KeyEsc, constants.KeyCtrlC)
 	case m.CurrentView == constants.ViewSummary:
-		return "↑/↓: navigate • enter: select • tab: toggle input • esc: back • q: quit"
+		return fmt.Sprintf("↑/↓: navigate • %s: select • %s: toggle input • %s: back • %s: quit", constants.KeyEnter, constants.KeyTab, constants.KeyEsc, constants.KeyQ)
 	default:
-		return "↑/↓: navigate • enter: select • esc: back • q: quit"
+		return fmt.Sprintf("↑/↓: navigate • %s: select • %s: back • %s: quit", constants.KeyEnter, constants.KeyEsc, constants.KeyQ)
 	}
 }

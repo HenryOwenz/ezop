@@ -76,7 +76,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.core.IsLoading {
 			// Only allow quit commands during loading
 			switch msg.String() {
-			case "ctrl+c", "q":
+			case constants.KeyCtrlC, constants.KeyQ:
 				return m, tea.Quit
 			default:
 				// Ignore all other key presses during loading
@@ -86,9 +86,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Handle key presses when not loading
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case constants.KeyCtrlC, constants.KeyQ:
 			return m, tea.Quit
-		case "enter":
+		case constants.KeyEnter:
 			modelWrapper, cmd := handlers.HandleEnter(m.core)
 			if wrapper, ok := modelWrapper.(handlers.ModelWrapper); ok {
 				// Since ModelWrapper embeds *core.Model, we can create a new Model with it
@@ -99,9 +99,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return newModel, cmd
 			}
 			return modelWrapper, cmd
-		case "esc", "-":
+		case constants.KeyEsc, constants.KeyAltBack:
 			// Only use '-' for back navigation if not in text input mode
-			if msg.String() == "-" && m.core.ManualInput {
+			if msg.String() == constants.KeyAltBack && m.core.ManualInput {
 				// If in text input mode, '-' should be treated as a character
 				var cmd tea.Cmd
 				m.core.TextInput, cmd = m.core.TextInput.Update(msg)
@@ -118,13 +118,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model := navigation.NavigateBack(m.core)
 			view.UpdateTableForView(model)
 			return Model{core: model}, nil
-		case "up", "k":
+		case constants.KeyUp, constants.KeyAltUp:
 			m.core.Table.MoveUp(1)
 			return m, nil
-		case "down", "j":
+		case constants.KeyDown, constants.KeyAltDown:
 			m.core.Table.MoveDown(1)
 			return m, nil
-		case "tab":
+		case constants.KeyTab:
 			// Tab is now only used for other views, not AWS config
 			if m.core.CurrentView == constants.ViewSummary {
 				if m.core.ManualInput {
