@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/HenryOwenz/cloudgate/internal/aws"
+	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/styles"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -40,7 +41,10 @@ type Model struct {
 	IsLoading  bool
 	LoadingMsg string
 
-	// AWS Resources
+	// Provider Registry
+	Registry *providers.ProviderRegistry
+
+	// AWS Resources (legacy)
 	Provider   *aws.Provider
 	Approvals  []aws.ApprovalAction
 	Pipelines  []aws.PipelineStatus
@@ -86,6 +90,7 @@ func New() *Model {
 		Table:       t,
 		CurrentView: constants.ViewProviders,
 		Styles:      styles.DefaultStyles(),
+		Registry:    providers.NewProviderRegistry(),
 		// Initialize empty slices to avoid nil pointer issues
 		Profiles:   []string{},
 		Regions:    []string{},

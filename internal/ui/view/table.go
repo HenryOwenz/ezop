@@ -3,6 +3,7 @@ package view
 import (
 	"fmt"
 
+	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/core"
 	"github.com/charmbracelet/bubbles/table"
@@ -99,11 +100,20 @@ func getColumnsForView(m *core.Model) []table.Column {
 func getRowsForView(m *core.Model) []table.Row {
 	switch m.CurrentView {
 	case constants.ViewProviders:
-		return []table.Row{
-			{"Amazon Web Services", "AWS Cloud Services"},
-			{"Microsoft Azure (Coming Soon)", "Azure Cloud Platform"},
-			{"Google Cloud Platform (Coming Soon)", "Google Cloud Services"},
+		// Initialize providers if not already done
+		if len(m.Registry.GetProviderNames()) == 0 {
+			providers.InitializeProviders(m.Registry)
 		}
+
+		// Get all providers from the registry
+		providerList := m.Registry.List()
+		rows := make([]table.Row, len(providerList))
+
+		for i, provider := range providerList {
+			rows[i] = table.Row{provider.Name(), provider.Description()}
+		}
+
+		return rows
 	case constants.ViewAWSConfig:
 		if m.AwsProfile == "" {
 			rows := make([]table.Row, len(m.Profiles)+1)
@@ -120,23 +130,118 @@ func getRowsForView(m *core.Model) []table.Row {
 		}
 		return rows
 	case constants.ViewSelectService:
-		return []table.Row{
-			{"CodePipeline", "Continuous Delivery Service"},
+		// Get the AWS provider from the registry
+		provider, err := m.Registry.Get("AWS")
+		if err != nil {
+			return []table.Row{}
 		}
+
+		// Get all services from the provider
+		services := provider.Services()
+		rows := make([]table.Row, len(services))
+
+		for i, service := range services {
+			rows[i] = table.Row{service.Name(), service.Description()}
+		}
+
+		return rows
 	case constants.ViewSelectCategory:
-		return []table.Row{
-			{"Workflows", "Pipeline Workflows and Approvals"},
-			{"Operations (Coming Soon)", "Service Operations"},
+		if m.SelectedService == nil {
+			return []table.Row{}
 		}
-	case constants.ViewSelectOperation:
-		if m.SelectedCategory != nil && m.SelectedCategory.Name == "Workflows" {
-			return []table.Row{
-				{"Pipeline Approvals", "Manage Pipeline Approvals"},
-				{"Pipeline Status", "View Pipeline Status"},
-				{"Start Pipeline", "Trigger Pipeline Execution"},
+
+		// Get the AWS provider from the registry
+		provider, err := m.Registry.Get("AWS")
+		if err != nil {
+			return []table.Row{}
+		}
+
+		// Find the selected service
+		var selectedService providers.Service
+		for _, service := range provider.Services() {
+			if service.Name() == m.SelectedService.Name {
+				selectedService = service
+				break
 			}
 		}
-		return []table.Row{}
+
+		if selectedService == nil {
+			return []table.Row{}
+		}
+
+		// Get all categories from the service
+		categories := selectedService.Categories()
+
+		// Filter out internal categories
+		var visibleCategories []providers.Category
+		for _, category := range categories {
+			// Only include categories that are marked as UI visible
+			if category.IsUIVisible() {
+				visibleCategories = append(visibleCategories, category)
+			}
+		}
+
+		rows := make([]table.Row, len(visibleCategories))
+		for i, category := range visibleCategories {
+			rows[i] = table.Row{category.Name(), category.Description()}
+		}
+
+		return rows
+	case constants.ViewSelectOperation:
+		if m.SelectedService == nil || m.SelectedCategory == nil {
+			return []table.Row{}
+		}
+
+		// Get the AWS provider from the registry
+		provider, err := m.Registry.Get("AWS")
+		if err != nil {
+			return []table.Row{}
+		}
+
+		// Find the selected service
+		var selectedService providers.Service
+		for _, service := range provider.Services() {
+			if service.Name() == m.SelectedService.Name {
+				selectedService = service
+				break
+			}
+		}
+
+		if selectedService == nil {
+			return []table.Row{}
+		}
+
+		// Find the selected category
+		var selectedCategory providers.Category
+		for _, category := range selectedService.Categories() {
+			if category.Name() == m.SelectedCategory.Name {
+				selectedCategory = category
+				break
+			}
+		}
+
+		if selectedCategory == nil {
+			return []table.Row{}
+		}
+
+		// Get all operations from the category
+		operations := selectedCategory.Operations()
+
+		// Filter out internal operations
+		var visibleOperations []providers.Operation
+		for _, operation := range operations {
+			// Only include operations that are marked as UI visible
+			if operation.IsUIVisible() {
+				visibleOperations = append(visibleOperations, operation)
+			}
+		}
+
+		rows := make([]table.Row, len(visibleOperations))
+		for i, operation := range visibleOperations {
+			rows[i] = table.Row{operation.Name(), operation.Description()}
+		}
+
+		return rows
 	case constants.ViewApprovals:
 		rows := make([]table.Row, len(m.Approvals))
 		for i, approval := range m.Approvals {

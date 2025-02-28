@@ -12,47 +12,36 @@
                                                    $$$$$$/                                
 ```
 
-# Cloudgate
-
-A seamless gateway to your cloud universe. Cloudgate is an elegant Terminal UI that reflects and unifies your multi-cloud operations across AWS, Azure, and GCP.
-
-> *Like its namesake sculpture that reflects Chicago's skyline in liquid mercury, Cloudgate provides a fluid, unified view into your cloud landscape.*
+# cloudgate
+A seamless gateway to your cloud universe. cloudgate is a Terminal Application that unifies your multi-cloud operations across AWS, Azure, and GCP.
+> *Where your clouds converge.*
 
 ## Features
 
-- 🪞 **Unified Reflection** - View and manage multiple cloud providers through a single, elegant interface
-  - AWS integration
-  - Azure integration (Coming Soon)
-  - GCP integration (Coming Soon)
+### Cloud Provider Integration
+- **AWS** - Full support for AWS services and operations
+- **Azure** - Coming soon
+- **GCP** - Coming soon
 
-- 🌐 **Multi-Account Management**
-  - Seamless switching between accounts
-  - Profile-based authentication (AWS)
-  - Cross-account operations (coming soon)
+### Core Capabilities
 
-- 🎨 **Beautiful Terminal UI**
-  - Fluid navigation
-  - Context-aware menus
-  - Real-time status updates
-  - Responsive layouts
-  - Interactive selections
-  - Loading indicators
+#### AWS
+- **Multi-Account Management** - Switch between AWS profiles and regions seamlessly
+- **CodePipeline Integration** - View, approve, and trigger pipeline executions
+- **Pipeline Status Monitoring** - Real-time updates on pipeline states and stages
+- **Approval Workflows** - Manage manual approval actions in CodePipeline
 
-- 🔄 **Cloud Operations**
-  - Pipeline management
-  - Approval workflows
-  - Status monitoring
-  - Resource operations
-  - Real-time updates
+#### Azure (Coming Soon)
 
-- 🛡️ **Safety Features**
-  - Clear operation preview
-  - Multi-step confirmations
-  - Easy cancellation
-  - Error recovery
-  - Context awareness
+#### GCP (Coming Soon)
 
-## Installation / Upgrade
+### User Experience
+- **Terminal-Based UI** - Fast, responsive, and keyboard-driven interface
+- **Context-Aware Navigation** - Intuitive menus that adapt to your workflow
+- **Safety Controls** - Confirmation steps and clear operation previews
+- **Visual Feedback** - Loading indicators and status updates
+
+## Installation
 
 ### Linux and MacOS
 
@@ -68,7 +57,7 @@ Open PowerShell and run:
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))
 ```
 
-After installation, you can run Cloudgate using the `cg` command from anywhere in your terminal.
+After installation, you can run cloudgate using the `cg` command from anywhere in your terminal.
 
 ## Prerequisites
 
@@ -98,7 +87,7 @@ After installation, you can run Cloudgate using the `cg` command from anywhere i
 
 ## Usage
 
-1. Launch Cloudgate:
+1. Launch cloudgate:
    ```bash
    cg
    ```
@@ -131,6 +120,12 @@ After installation, you can run Cloudgate using the `cg` command from anywhere i
 - `q`: Quit application
 - `Ctrl+c`: Force quit
 
+## Architecture
+
+cloudgate is built with a dual-layer architecture that separates cloud provider implementations from the application's business logic. This design enables easy extension to support multiple cloud providers while maintaining a clean and maintainable codebase.
+
+For detailed information about the architecture and design patterns used in cloudgate, please refer to the [documentation directory](documentation/README.md).
+
 ## Future Enhancements
 
 - Azure integration
@@ -149,9 +144,7 @@ After installation, you can run Cloudgate using the `cg` command from anywhere i
 
 Contributions are welcome! Feel free to submit a Pull Request.
 
-## The Name
-
-Cloudgate is inspired by the famous Cloud Gate sculpture in Chicago, known for its liquid mercury surface that reflects and transforms the city's skyline. Similarly, our tool provides a reflective interface that unifies and transforms how you interact with multiple cloud providers.
+Please read our [documentation](documentation/README.md) to understand the architecture and design patterns used in cloudgate before contributing.
 
 ## License
 
