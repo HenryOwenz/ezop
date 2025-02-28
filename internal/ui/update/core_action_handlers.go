@@ -1,4 +1,4 @@
-package handlers
+package update
 
 import (
 	"context"
@@ -7,12 +7,12 @@ import (
 
 	"github.com/HenryOwenz/cloudgate/internal/aws"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 )
 
 // UpdateModelForView updates the model based on the current view
-func UpdateModelForView(m *core.Model) error {
+func UpdateModelForView(m *model.Model) error {
 	switch m.CurrentView {
 	case constants.ViewAWSConfig:
 		if m.AwsProfile == "" {
@@ -76,7 +76,7 @@ func UpdateModelForView(m *core.Model) error {
 }
 
 // ExecuteAction executes the selected action
-func ExecuteAction(m *core.Model) error {
+func ExecuteAction(m *model.Model) error {
 	if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
 		if m.SelectedPipeline == nil {
 			return fmt.Errorf(constants.MsgErrorNoPipeline)

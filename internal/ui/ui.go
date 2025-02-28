@@ -2,8 +2,8 @@ package ui
 
 import (
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
-	"github.com/HenryOwenz/cloudgate/internal/ui/handlers"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
+	"github.com/HenryOwenz/cloudgate/internal/ui/update"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,13 +11,13 @@ import (
 
 // Model is the main UI model that implements the tea.Model interface
 type Model struct {
-	core *core.Model
+	core *model.Model
 }
 
 // New creates a new UI model
 func New() Model {
 	m := Model{
-		core: core.New(),
+		core: model.New(),
 	}
 	// Initialize the table for the current view
 	view.UpdateTableForView(m.core)
@@ -42,12 +42,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newModel.core.Height = msg.Height
 		view.UpdateTableForView(newModel.core)
 		return newModel, nil
-	case core.ErrMsg:
+	case model.ErrMsg:
 		newModel := m.Clone()
 		newModel.core.Err = msg.Err
 		newModel.core.IsLoading = false
 		return newModel, nil
-	case core.ApprovalsMsg:
+	case model.ApprovalsMsg:
 		newModel := m.Clone()
 		newModel.core.Approvals = msg.Approvals
 		newModel.core.Provider = msg.Provider
@@ -55,16 +55,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newModel.core.IsLoading = false
 		view.UpdateTableForView(newModel.core)
 		return newModel, nil
-	case core.ApprovalResultMsg:
+	case model.ApprovalResultMsg:
 		newModel := m.Clone()
 		newModel.core.IsLoading = false // Ensure loading is turned off
-		handlers.HandleApprovalResult(newModel.core, msg.Err)
+		update.HandleApprovalResult(newModel.core, msg.Err)
 		view.UpdateTableForView(newModel.core)
 		return newModel, nil
-	case core.PipelineExecutionMsg:
+	case model.PipelineExecutionMsg:
 		newModel := m.Clone()
 		newModel.core.IsLoading = false // Ensure loading is turned off
-		handlers.HandlePipelineExecution(newModel.core, msg.Err)
+		update.HandlePipelineExecution(newModel.core, msg.Err)
 		view.UpdateTableForView(newModel.core)
 		return newModel, nil
 	case spinner.TickMsg:
@@ -93,9 +93,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case constants.KeyCtrlC, constants.KeyQ:
 			return m, tea.Quit
 		case constants.KeyEnter:
-			modelWrapper, cmd := handlers.HandleEnter(m.core)
-			if wrapper, ok := modelWrapper.(handlers.ModelWrapper); ok {
-				// Since ModelWrapper embeds *core.Model, we can create a new Model with it
+			modelWrapper, cmd := update.HandleEnter(m.core)
+			if wrapper, ok := modelWrapper.(update.ModelWrapper); ok {
+				// Since ModelWrapper embeds *model.Model, we can create a new Model with it
 				newModel := Model{core: wrapper.Model}
 				if newModel.core.IsLoading {
 					return newModel, tea.Batch(cmd, newModel.core.Spinner.Tick)
@@ -121,7 +121,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				view.UpdateTableForView(newModel.core)
 				return newModel, nil
 			}
-			newCore := handlers.NavigateBack(m.core)
+			newCore := update.NavigateBack(m.core)
 			view.UpdateTableForView(newCore)
 			return Model{core: newCore}, nil
 		case constants.KeyUp, constants.KeyAltUp:
@@ -168,7 +168,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return newModel, cmd
 			}
 		}
-	case core.PipelineStatusMsg:
+	case model.PipelineStatusMsg:
 		newModel := m.Clone()
 		newModel.core.Pipelines = msg.Pipelines
 		newModel.core.Provider = msg.Provider

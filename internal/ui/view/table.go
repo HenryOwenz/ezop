@@ -5,12 +5,12 @@ import (
 
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/charmbracelet/bubbles/table"
 )
 
 // UpdateTableForView updates the table model based on the current view
-func UpdateTableForView(m *core.Model) {
+func UpdateTableForView(m *model.Model) {
 	columns := getColumnsForView(m)
 	rows := getRowsForView(m)
 
@@ -32,7 +32,7 @@ func UpdateTableForView(m *core.Model) {
 }
 
 // getColumnsForView returns the appropriate columns for the current view
-func getColumnsForView(m *core.Model) []table.Column {
+func getColumnsForView(m *model.Model) []table.Column {
 	switch m.CurrentView {
 	case constants.ViewProviders:
 		return []table.Column{
@@ -97,7 +97,7 @@ func getColumnsForView(m *core.Model) []table.Column {
 }
 
 // getRowsForView returns the appropriate rows for the current view
-func getRowsForView(m *core.Model) []table.Row {
+func getRowsForView(m *model.Model) []table.Row {
 	switch m.CurrentView {
 	case constants.ViewProviders:
 		// Initialize providers if not already done

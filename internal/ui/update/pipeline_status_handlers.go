@@ -1,4 +1,4 @@
-package handlers
+package update
 
 import (
 	"context"
@@ -11,12 +11,12 @@ import (
 	"github.com/HenryOwenz/cloudgate/internal/aws"
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 )
 
 // HandlePipelineExecution handles the result of a pipeline execution
-func HandlePipelineExecution(m *core.Model, err error) {
+func HandlePipelineExecution(m *model.Model, err error) {
 	if err != nil {
 		m.Error = fmt.Sprintf(constants.MsgErrorGeneric, err.Error())
 		m.CurrentView = constants.ViewError
@@ -46,12 +46,12 @@ func HandlePipelineExecution(m *core.Model, err error) {
 }
 
 // FetchPipelineStatus fetches pipeline status from AWS
-func FetchPipelineStatus(m *core.Model) tea.Cmd {
+func FetchPipelineStatus(m *model.Model) tea.Cmd {
 	return func() tea.Msg {
 		// Get the AWS provider from the registry
 		provider, err := m.Registry.Get("AWS")
 		if err != nil {
-			return core.ErrMsg{Err: err}
+			return model.ErrMsg{Err: err}
 		}
 
 		// Find the selected service
@@ -64,7 +64,7 @@ func FetchPipelineStatus(m *core.Model) tea.Cmd {
 		}
 
 		if selectedService == nil {
-			return core.ErrMsg{Err: fmt.Errorf("selected service not found")}
+			return model.ErrMsg{Err: fmt.Errorf("selected service not found")}
 		}
 
 		// Find the selected category
@@ -77,7 +77,7 @@ func FetchPipelineStatus(m *core.Model) tea.Cmd {
 		}
 
 		if selectedCategory == nil {
-			return core.ErrMsg{Err: fmt.Errorf("selected category not found")}
+			return model.ErrMsg{Err: fmt.Errorf("selected category not found")}
 		}
 
 		// Find the operation for pipeline status
@@ -90,14 +90,14 @@ func FetchPipelineStatus(m *core.Model) tea.Cmd {
 		}
 
 		if statusOperation == nil {
-			return core.ErrMsg{Err: fmt.Errorf("pipeline status operation not found")}
+			return model.ErrMsg{Err: fmt.Errorf("pipeline status operation not found")}
 		}
 
 		// Execute the operation
 		ctx := context.Background()
 		result, err := statusOperation.Execute(ctx, nil)
 		if err != nil {
-			return core.ErrMsg{Err: err}
+			return model.ErrMsg{Err: err}
 		}
 
 		// Convert the result to pipeline status
@@ -160,28 +160,28 @@ func FetchPipelineStatus(m *core.Model) tea.Cmd {
 			// Try to convert using our helper function
 			convertedPipelines, err := convertCodePipelineStatus(result)
 			if err != nil {
-				return core.ErrMsg{Err: fmt.Errorf("unexpected result type: %T - %v", result, err)}
+				return model.ErrMsg{Err: fmt.Errorf("unexpected result type: %T - %v", result, err)}
 			}
 			pipelines = convertedPipelines
 		}
 
-		return core.PipelineStatusMsg{
+		return model.PipelineStatusMsg{
 			Pipelines: pipelines,
 		}
 	}
 }
 
 // ExecutePipeline executes a pipeline
-func ExecutePipeline(m *core.Model) tea.Cmd {
+func ExecutePipeline(m *model.Model) tea.Cmd {
 	return func() tea.Msg {
 		if m.SelectedPipeline == nil {
-			return core.ErrMsg{Err: fmt.Errorf("no pipeline selected")}
+			return model.ErrMsg{Err: fmt.Errorf("no pipeline selected")}
 		}
 
 		// Get the AWS provider from the registry
 		provider, err := m.Registry.Get("AWS")
 		if err != nil {
-			return core.ErrMsg{Err: err}
+			return model.ErrMsg{Err: err}
 		}
 
 		// Find the CodePipeline service
@@ -194,7 +194,7 @@ func ExecutePipeline(m *core.Model) tea.Cmd {
 		}
 
 		if codePipelineService == nil {
-			return core.ErrMsg{Err: fmt.Errorf("CodePipeline service not found")}
+			return model.ErrMsg{Err: fmt.Errorf("CodePipeline service not found")}
 		}
 
 		// Find the Workflows category
@@ -207,7 +207,7 @@ func ExecutePipeline(m *core.Model) tea.Cmd {
 		}
 
 		if workflowsCategory == nil {
-			return core.ErrMsg{Err: fmt.Errorf("Workflows category not found")}
+			return model.ErrMsg{Err: fmt.Errorf("Workflows category not found")}
 		}
 
 		// Find the start pipeline operation
@@ -220,7 +220,7 @@ func ExecutePipeline(m *core.Model) tea.Cmd {
 		}
 
 		if startPipelineOperation == nil {
-			return core.ErrMsg{Err: fmt.Errorf("start pipeline operation not found")}
+			return model.ErrMsg{Err: fmt.Errorf("start pipeline operation not found")}
 		}
 
 		// Prepare parameters for the operation
@@ -237,10 +237,10 @@ func ExecutePipeline(m *core.Model) tea.Cmd {
 		ctx := context.Background()
 		_, err = startPipelineOperation.Execute(ctx, params)
 		if err != nil {
-			return core.PipelineExecutionMsg{Err: err}
+			return model.PipelineExecutionMsg{Err: err}
 		}
 
-		return core.PipelineExecutionMsg{Err: nil}
+		return model.PipelineExecutionMsg{Err: nil}
 	}
 }
 

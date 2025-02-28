@@ -1,14 +1,14 @@
-package handlers
+package update
 
 import (
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // HandleApprovalSelection handles the selection of a pipeline approval
-func HandleApprovalSelection(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleApprovalSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		newModel := m.Clone()
 		for _, approval := range m.Approvals {

@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/charmbracelet/lipgloss"
 )
 
 // Render renders the UI
-func Render(m *core.Model) string {
+func Render(m *model.Model) string {
 	if m.Err != nil {
 		return renderErrorView(m)
 	}
@@ -34,7 +34,7 @@ func Render(m *core.Model) string {
 }
 
 // renderErrorView renders the error view
-func renderErrorView(m *core.Model) string {
+func renderErrorView(m *model.Model) string {
 	return m.Styles.App.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
@@ -46,17 +46,17 @@ func renderErrorView(m *core.Model) string {
 }
 
 // renderTitle renders the title based on the current view
-func renderTitle(m *core.Model) string {
+func renderTitle(m *model.Model) string {
 	return m.Styles.Title.Render(getTitleText(m))
 }
 
 // renderContext renders the context based on the current view
-func renderContext(m *core.Model) string {
+func renderContext(m *model.Model) string {
 	return m.Styles.Context.Render(getContextText(m))
 }
 
 // renderLoadingSpinner renders the loading spinner if needed
-func renderLoadingSpinner(m *core.Model) string {
+func renderLoadingSpinner(m *model.Model) string {
 	if m.IsLoading {
 		return m.Spinner.View()
 	}
@@ -64,7 +64,7 @@ func renderLoadingSpinner(m *core.Model) string {
 }
 
 // renderMainContent renders the main content area (table or text input)
-func renderMainContent(m *core.Model) string {
+func renderMainContent(m *model.Model) string {
 	// For Summary view with approvals, always show text input
 	if m.CurrentView == constants.ViewSummary && m.SelectedApproval != nil {
 		return m.TextInput.View()
@@ -79,12 +79,12 @@ func renderMainContent(m *core.Model) string {
 }
 
 // renderHelpText renders the help text based on the current view
-func renderHelpText(m *core.Model) string {
+func renderHelpText(m *model.Model) string {
 	return m.Styles.Help.Render(getHelpText(m))
 }
 
 // getContextText returns the appropriate context text for the current view
-func getContextText(m *core.Model) string {
+func getContextText(m *model.Model) string {
 	switch m.CurrentView {
 	case constants.ViewProviders:
 		return getProvidersContextText()
@@ -117,7 +117,7 @@ func getProvidersContextText() string {
 }
 
 // getAWSConfigContextText returns the context text for the AWS config view
-func getAWSConfigContextText(m *core.Model) string {
+func getAWSConfigContextText(m *model.Model) string {
 	if m.AwsProfile == "" {
 		// If in manual entry mode for profile, show the text input in the context
 		if m.ManualInput {
@@ -133,14 +133,14 @@ func getAWSConfigContextText(m *core.Model) string {
 }
 
 // getSelectServiceContextText returns the context text for the select service view
-func getSelectServiceContextText(m *core.Model) string {
+func getSelectServiceContextText(m *model.Model) string {
 	return fmt.Sprintf("Profile: %s\nRegion: %s",
 		m.AwsProfile,
 		m.AwsRegion)
 }
 
 // getSelectCategoryContextText returns the context text for the select category view
-func getSelectCategoryContextText(m *core.Model) string {
+func getSelectCategoryContextText(m *model.Model) string {
 	if m.SelectedService == nil {
 		return ""
 	}
@@ -149,7 +149,7 @@ func getSelectCategoryContextText(m *core.Model) string {
 }
 
 // getSelectOperationContextText returns the context text for the select operation view
-func getSelectOperationContextText(m *core.Model) string {
+func getSelectOperationContextText(m *model.Model) string {
 	if m.SelectedService == nil || m.SelectedCategory == nil {
 		return ""
 	}
@@ -159,14 +159,14 @@ func getSelectOperationContextText(m *core.Model) string {
 }
 
 // getApprovalsContextText returns the context text for the approvals view
-func getApprovalsContextText(m *core.Model) string {
+func getApprovalsContextText(m *model.Model) string {
 	return fmt.Sprintf("Profile: %s\nRegion: %s",
 		m.AwsProfile,
 		m.AwsRegion)
 }
 
 // getConfirmationSummaryContextText returns the context text for the confirmation and summary views
-func getConfirmationSummaryContextText(m *core.Model) string {
+func getConfirmationSummaryContextText(m *model.Model) string {
 	if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
 		if m.SelectedPipeline == nil {
 			return ""
@@ -186,7 +186,7 @@ func getConfirmationSummaryContextText(m *core.Model) string {
 }
 
 // getExecutingActionContextText returns the context text for the executing action view
-func getExecutingActionContextText(m *core.Model) string {
+func getExecutingActionContextText(m *model.Model) string {
 	if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
 		if m.SelectedPipeline == nil {
 			return ""
@@ -207,14 +207,14 @@ func getExecutingActionContextText(m *core.Model) string {
 }
 
 // getPipelineStatusContextText returns the context text for the pipeline status view
-func getPipelineStatusContextText(m *core.Model) string {
+func getPipelineStatusContextText(m *model.Model) string {
 	return fmt.Sprintf("Profile: %s\nRegion: %s",
 		m.AwsProfile,
 		m.AwsRegion)
 }
 
 // getPipelineStagesContextText returns the context text for the pipeline stages view
-func getPipelineStagesContextText(m *core.Model) string {
+func getPipelineStagesContextText(m *model.Model) string {
 	if m.SelectedPipeline == nil {
 		return ""
 	}
@@ -225,7 +225,7 @@ func getPipelineStagesContextText(m *core.Model) string {
 }
 
 // getTitleText returns the appropriate title for the current view
-func getTitleText(m *core.Model) string {
+func getTitleText(m *model.Model) string {
 	// Map of view types to their corresponding titles
 	titleMap := map[constants.View]string{
 		constants.ViewProviders:       constants.TitleProviders,
@@ -259,7 +259,7 @@ func getTitleText(m *core.Model) string {
 }
 
 // getHelpText returns the appropriate help text for the current view
-func getHelpText(m *core.Model) string {
+func getHelpText(m *model.Model) string {
 	// Define common help text patterns
 	const (
 		defaultHelpText     = "↑/↓: navigate • %s: select • %s: back • %s: quit"
@@ -284,7 +284,7 @@ func getHelpText(m *core.Model) string {
 }
 
 // renderTable renders the table for the current view
-func renderTable(m *core.Model) string {
+func renderTable(m *model.Model) string {
 	if m.Table.Rows() == nil {
 		return ""
 	}

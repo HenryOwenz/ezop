@@ -1,14 +1,14 @@
-package handlers
+package update
 
 import (
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // HandleConfirmationSelection handles the selection of an approval action
-func HandleConfirmationSelection(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleConfirmationSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		newModel := m.Clone()
 		if selected[0] == "Approve" {
@@ -31,7 +31,7 @@ func HandleConfirmationSelection(m *core.Model) (tea.Model, tea.Cmd) {
 }
 
 // HandleSummaryConfirmation handles the confirmation of the summary
-func HandleSummaryConfirmation(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleSummaryConfirmation(m *model.Model) (tea.Model, tea.Cmd) {
 	if m.ManualInput {
 		// For manual input, just store the value and continue
 		newModel := m.Clone()
@@ -82,7 +82,7 @@ func HandleSummaryConfirmation(m *core.Model) (tea.Model, tea.Cmd) {
 }
 
 // HandleExecutionSelection handles the selection of an execution action
-func HandleExecutionSelection(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleExecutionSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		newModel := m.Clone()
 		if selected[0] == "Execute" {

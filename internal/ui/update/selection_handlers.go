@@ -1,15 +1,15 @@
-package handlers
+package update
 
 import (
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // HandleServiceSelection handles the selection of a service
-func HandleServiceSelection(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleServiceSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		serviceName := selected[0]
 
@@ -17,7 +17,7 @@ func HandleServiceSelection(m *core.Model) (tea.Model, tea.Cmd) {
 		provider, err := m.Registry.Get("AWS")
 		if err != nil {
 			return WrapModel(m), func() tea.Msg {
-				return core.ErrMsg{Err: err}
+				return model.ErrMsg{Err: err}
 			}
 		}
 
@@ -32,7 +32,7 @@ func HandleServiceSelection(m *core.Model) (tea.Model, tea.Cmd) {
 
 		if selectedService != nil {
 			newModel := m.Clone()
-			newModel.SelectedService = &core.Service{
+			newModel.SelectedService = &model.Service{
 				Name:        selectedService.Name(),
 				Description: selectedService.Description(),
 			}
@@ -45,7 +45,7 @@ func HandleServiceSelection(m *core.Model) (tea.Model, tea.Cmd) {
 }
 
 // HandleCategorySelection handles the selection of a category
-func HandleCategorySelection(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleCategorySelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		categoryName := selected[0]
 
@@ -53,7 +53,7 @@ func HandleCategorySelection(m *core.Model) (tea.Model, tea.Cmd) {
 		provider, err := m.Registry.Get("AWS")
 		if err != nil {
 			return WrapModel(m), func() tea.Msg {
-				return core.ErrMsg{Err: err}
+				return model.ErrMsg{Err: err}
 			}
 		}
 
@@ -81,7 +81,7 @@ func HandleCategorySelection(m *core.Model) (tea.Model, tea.Cmd) {
 
 		if selectedCategory != nil {
 			newModel := m.Clone()
-			newModel.SelectedCategory = &core.Category{
+			newModel.SelectedCategory = &model.Category{
 				Name:        selectedCategory.Name(),
 				Description: selectedCategory.Description(),
 			}
@@ -94,7 +94,7 @@ func HandleCategorySelection(m *core.Model) (tea.Model, tea.Cmd) {
 }
 
 // HandleOperationSelection handles the selection of an operation
-func HandleOperationSelection(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleOperationSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		operationName := selected[0]
 
@@ -102,7 +102,7 @@ func HandleOperationSelection(m *core.Model) (tea.Model, tea.Cmd) {
 		provider, err := m.Registry.Get("AWS")
 		if err != nil {
 			return WrapModel(m), func() tea.Msg {
-				return core.ErrMsg{Err: err}
+				return model.ErrMsg{Err: err}
 			}
 		}
 
@@ -143,7 +143,7 @@ func HandleOperationSelection(m *core.Model) (tea.Model, tea.Cmd) {
 
 		if selectedOperation != nil {
 			newModel := m.Clone()
-			newModel.SelectedOperation = &core.Operation{
+			newModel.SelectedOperation = &model.Operation{
 				Name:        selectedOperation.Name(),
 				Description: selectedOperation.Description(),
 			}

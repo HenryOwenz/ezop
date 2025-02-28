@@ -1,17 +1,17 @@
-package handlers
+package update
 
 import (
 	"strings"
 
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // NavigateBack handles navigation to the previous view
-func NavigateBack(m *core.Model) *core.Model {
+func NavigateBack(m *model.Model) *model.Model {
 	newModel := m.Clone()
 
 	switch m.CurrentView {
@@ -75,7 +75,7 @@ func NavigateBack(m *core.Model) *core.Model {
 }
 
 // HandleEnter processes the enter key press based on the current view
-func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleEnter(m *model.Model) (tea.Model, tea.Cmd) {
 	// Special handling for manual input in AWS config view
 	if m.CurrentView == constants.ViewAWSConfig && m.ManualInput {
 		newModel := m.Clone()
@@ -107,7 +107,7 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 			_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.AwsProfile, newModel.AwsRegion)
 			if err != nil {
 				return WrapModel(newModel), func() tea.Msg {
-					return core.ErrMsg{Err: err}
+					return model.ErrMsg{Err: err}
 				}
 			}
 
@@ -182,7 +182,7 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 }
 
 // HandleProviderSelection handles the selection of a cloud provider
-func HandleProviderSelection(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleProviderSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		providerName := selected[0]
 
@@ -204,7 +204,7 @@ func HandleProviderSelection(m *core.Model) (tea.Model, tea.Cmd) {
 }
 
 // HandleAWSConfigSelection handles the selection of AWS profile or region
-func HandleAWSConfigSelection(m *core.Model) (tea.Model, tea.Cmd) {
+func HandleAWSConfigSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		newModel := m.Clone()
 
@@ -234,7 +234,7 @@ func HandleAWSConfigSelection(m *core.Model) (tea.Model, tea.Cmd) {
 			_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.AwsProfile, newModel.AwsRegion)
 			if err != nil {
 				return WrapModel(newModel), func() tea.Msg {
-					return core.ErrMsg{Err: err}
+					return model.ErrMsg{Err: err}
 				}
 			}
 

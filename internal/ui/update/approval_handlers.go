@@ -1,4 +1,4 @@
-package handlers
+package update
 
 import (
 	"context"
@@ -11,12 +11,12 @@ import (
 	"github.com/HenryOwenz/cloudgate/internal/aws"
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 )
 
 // HandleApprovalResult handles the result of an approval action
-func HandleApprovalResult(m *core.Model, err error) {
+func HandleApprovalResult(m *model.Model, err error) {
 	if err != nil {
 		m.Error = fmt.Sprintf(constants.MsgErrorGeneric, err.Error())
 		m.CurrentView = constants.ViewError
@@ -56,12 +56,12 @@ func HandleApprovalResult(m *core.Model, err error) {
 }
 
 // FetchApprovals fetches pipeline approvals from AWS
-func FetchApprovals(m *core.Model) tea.Cmd {
+func FetchApprovals(m *model.Model) tea.Cmd {
 	return func() tea.Msg {
 		// Get the AWS provider from the registry
 		provider, err := m.Registry.Get("AWS")
 		if err != nil {
-			return core.ErrMsg{Err: err}
+			return model.ErrMsg{Err: err}
 		}
 
 		// Find the selected service
@@ -74,7 +74,7 @@ func FetchApprovals(m *core.Model) tea.Cmd {
 		}
 
 		if selectedService == nil {
-			return core.ErrMsg{Err: fmt.Errorf("selected service not found")}
+			return model.ErrMsg{Err: fmt.Errorf("selected service not found")}
 		}
 
 		// Find the selected category
@@ -87,7 +87,7 @@ func FetchApprovals(m *core.Model) tea.Cmd {
 		}
 
 		if selectedCategory == nil {
-			return core.ErrMsg{Err: fmt.Errorf("selected category not found")}
+			return model.ErrMsg{Err: fmt.Errorf("selected category not found")}
 		}
 
 		// Find the selected operation
@@ -100,14 +100,14 @@ func FetchApprovals(m *core.Model) tea.Cmd {
 		}
 
 		if selectedOperation == nil {
-			return core.ErrMsg{Err: fmt.Errorf("selected operation not found")}
+			return model.ErrMsg{Err: fmt.Errorf("selected operation not found")}
 		}
 
 		// Execute the operation
 		ctx := context.Background()
 		result, err := selectedOperation.Execute(ctx, nil)
 		if err != nil {
-			return core.ErrMsg{Err: err}
+			return model.ErrMsg{Err: err}
 		}
 
 		// Convert the result to approvals
@@ -148,28 +148,28 @@ func FetchApprovals(m *core.Model) tea.Cmd {
 			// Try to convert using our helper function
 			convertedApprovals, err := convertCodePipelineApprovals(result)
 			if err != nil {
-				return core.ErrMsg{Err: fmt.Errorf("unexpected result type: %T - %v", result, err)}
+				return model.ErrMsg{Err: fmt.Errorf("unexpected result type: %T - %v", result, err)}
 			}
 			approvals = convertedApprovals
 		}
 
-		return core.ApprovalsMsg{
+		return model.ApprovalsMsg{
 			Approvals: approvals,
 		}
 	}
 }
 
 // ExecuteApproval executes an approval action
-func ExecuteApproval(m *core.Model) tea.Cmd {
+func ExecuteApproval(m *model.Model) tea.Cmd {
 	return func() tea.Msg {
 		if m.SelectedApproval == nil {
-			return core.ErrMsg{Err: fmt.Errorf("no approval selected")}
+			return model.ErrMsg{Err: fmt.Errorf("no approval selected")}
 		}
 
 		// Get the AWS provider from the registry
 		provider, err := m.Registry.Get("AWS")
 		if err != nil {
-			return core.ErrMsg{Err: err}
+			return model.ErrMsg{Err: err}
 		}
 
 		// Find the CodePipeline service
@@ -182,7 +182,7 @@ func ExecuteApproval(m *core.Model) tea.Cmd {
 		}
 
 		if codePipelineService == nil {
-			return core.ErrMsg{Err: fmt.Errorf("CodePipeline service not found")}
+			return model.ErrMsg{Err: fmt.Errorf("CodePipeline service not found")}
 		}
 
 		// Find the InternalOperations category
@@ -195,7 +195,7 @@ func ExecuteApproval(m *core.Model) tea.Cmd {
 		}
 
 		if internalCategory == nil {
-			return core.ErrMsg{Err: fmt.Errorf("InternalOperations category not found")}
+			return model.ErrMsg{Err: fmt.Errorf("InternalOperations category not found")}
 		}
 
 		// Find the approval operation
@@ -208,7 +208,7 @@ func ExecuteApproval(m *core.Model) tea.Cmd {
 		}
 
 		if approvalOperation == nil {
-			return core.ErrMsg{Err: fmt.Errorf("approval operation not found")}
+			return model.ErrMsg{Err: fmt.Errorf("approval operation not found")}
 		}
 
 		// Prepare parameters for the operation
@@ -225,10 +225,10 @@ func ExecuteApproval(m *core.Model) tea.Cmd {
 		ctx := context.Background()
 		_, err = approvalOperation.Execute(ctx, params)
 		if err != nil {
-			return core.ApprovalResultMsg{Err: err}
+			return model.ApprovalResultMsg{Err: err}
 		}
 
-		return core.ApprovalResultMsg{Err: nil}
+		return model.ApprovalResultMsg{Err: nil}
 	}
 }
 

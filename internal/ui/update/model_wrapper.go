@@ -1,13 +1,13 @@
-package handlers
+package update
 
 import (
-	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // ModelWrapper wraps a core.Model to implement the tea.Model interface
 type ModelWrapper struct {
-	Model *core.Model
+	Model *model.Model
 }
 
 // Update implements the tea.Model interface
@@ -29,6 +29,6 @@ func (m ModelWrapper) Init() tea.Cmd {
 }
 
 // WrapModel wraps a core.Model in a ModelWrapper
-func WrapModel(m *core.Model) ModelWrapper {
+func WrapModel(m *model.Model) ModelWrapper {
 	return ModelWrapper{Model: m}
 }
