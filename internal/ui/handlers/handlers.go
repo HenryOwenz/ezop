@@ -7,7 +7,6 @@ import (
 	"github.com/HenryOwenz/cloudgate/internal/aws"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/core"
-	"github.com/HenryOwenz/cloudgate/internal/ui/navigation"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -95,18 +94,18 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 		if !m.ManualInput {
 			if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
 				if selected := m.Table.SelectedRow(); len(selected) > 0 {
-					newModel := *m
+					newModel := m.Clone()
 					switch selected[0] {
 					case "Latest Commit":
 						newModel.CurrentView = constants.ViewExecutingAction
 						newModel.Summary = "" // Empty string means use latest commit
-						view.UpdateTableForView(&newModel)
-						return WrapModel(&newModel), nil
+						view.UpdateTableForView(newModel)
+						return WrapModel(newModel), nil
 					case "Manual Input":
 						newModel.ManualInput = true
 						newModel.TextInput.Focus()
 						newModel.TextInput.Placeholder = constants.MsgEnterCommitID
-						return WrapModel(&newModel), nil
+						return WrapModel(newModel), nil
 					}
 				}
 			}
@@ -116,19 +115,19 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 		return HandleExecutionSelection(m)
 	case constants.ViewPipelineStatus:
 		if selected := m.Table.SelectedRow(); len(selected) > 0 {
-			newModel := *m
+			newModel := m.Clone()
 			for _, pipeline := range m.Pipelines {
 				if pipeline.Name == selected[0] {
 					if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
 						newModel.CurrentView = constants.ViewExecutingAction
 						newModel.SelectedPipeline = &pipeline
-						view.UpdateTableForView(&newModel)
-						return WrapModel(&newModel), nil
+						view.UpdateTableForView(newModel)
+						return WrapModel(newModel), nil
 					}
 					newModel.CurrentView = constants.ViewPipelineStages
 					newModel.SelectedPipeline = &pipeline
-					view.UpdateTableForView(&newModel)
-					return WrapModel(&newModel), nil
+					view.UpdateTableForView(newModel)
+					return WrapModel(newModel), nil
 				}
 			}
 		}
@@ -142,10 +141,10 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 func HandleProviderSelection(m *core.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		if selected[0] == "Amazon Web Services" {
-			newModel := *m
+			newModel := m.Clone()
 			newModel.CurrentView = constants.ViewAWSConfig
-			view.UpdateTableForView(&newModel)
-			return WrapModel(&newModel), nil
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
 		}
 	}
 	return WrapModel(m), nil
@@ -154,7 +153,7 @@ func HandleProviderSelection(m *core.Model) (tea.Model, tea.Cmd) {
 // HandleAWSConfigSelection handles the selection of AWS profile or region
 func HandleAWSConfigSelection(m *core.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		newModel := *m
+		newModel := m.Clone()
 
 		// Handle "Manual Entry" option
 		if selected[0] == "Manual Entry" {
@@ -168,19 +167,19 @@ func HandleAWSConfigSelection(m *core.Model) (tea.Model, tea.Cmd) {
 				newModel.TextInput.Placeholder = constants.MsgEnterRegion
 			}
 
-			return WrapModel(&newModel), nil
+			return WrapModel(newModel), nil
 		}
 
 		// Handle regular selection
 		if m.AwsProfile == "" {
 			newModel.AwsProfile = selected[0]
-			view.UpdateTableForView(&newModel)
+			view.UpdateTableForView(newModel)
 		} else {
 			newModel.AwsRegion = selected[0]
 			newModel.CurrentView = constants.ViewSelectService
-			view.UpdateTableForView(&newModel)
+			view.UpdateTableForView(newModel)
 		}
-		return WrapModel(&newModel), nil
+		return WrapModel(newModel), nil
 	}
 	return WrapModel(m), nil
 }
@@ -188,14 +187,14 @@ func HandleAWSConfigSelection(m *core.Model) (tea.Model, tea.Cmd) {
 // HandleServiceSelection handles the selection of an AWS service
 func HandleServiceSelection(m *core.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		newModel := *m
+		newModel := m.Clone()
 		newModel.SelectedService = &core.Service{
 			Name:        selected[0],
 			Description: selected[1],
 		}
 		newModel.CurrentView = constants.ViewSelectCategory
-		view.UpdateTableForView(&newModel)
-		return WrapModel(&newModel), nil
+		view.UpdateTableForView(newModel)
+		return WrapModel(newModel), nil
 	}
 	return WrapModel(m), nil
 }
@@ -203,14 +202,14 @@ func HandleServiceSelection(m *core.Model) (tea.Model, tea.Cmd) {
 // HandleCategorySelection handles the selection of a service category
 func HandleCategorySelection(m *core.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		newModel := *m
+		newModel := m.Clone()
 		newModel.SelectedCategory = &core.Category{
 			Name:        selected[0],
 			Description: selected[1],
 		}
 		newModel.CurrentView = constants.ViewSelectOperation
-		view.UpdateTableForView(&newModel)
-		return WrapModel(&newModel), nil
+		view.UpdateTableForView(newModel)
+		return WrapModel(newModel), nil
 	}
 	return WrapModel(m), nil
 }
@@ -218,7 +217,7 @@ func HandleCategorySelection(m *core.Model) (tea.Model, tea.Cmd) {
 // HandleOperationSelection handles the selection of a service operation
 func HandleOperationSelection(m *core.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		newModel := *m
+		newModel := m.Clone()
 		newModel.SelectedOperation = &core.Operation{
 			Name:        selected[0],
 			Description: selected[1],
@@ -228,12 +227,12 @@ func HandleOperationSelection(m *core.Model) (tea.Model, tea.Cmd) {
 			// Start loading approvals
 			newModel.IsLoading = true
 			newModel.LoadingMsg = constants.MsgLoadingApprovals
-			return WrapModel(&newModel), FetchApprovals(m)
+			return WrapModel(newModel), FetchApprovals(m)
 		} else if selected[0] == "Pipeline Status" || selected[0] == "Start Pipeline" {
 			// Start loading pipeline status
 			newModel.IsLoading = true
 			newModel.LoadingMsg = constants.MsgLoadingPipelines
-			return WrapModel(&newModel), FetchPipelineStatus(m)
+			return WrapModel(newModel), FetchPipelineStatus(m)
 		}
 	}
 	return WrapModel(m), nil
@@ -242,100 +241,117 @@ func HandleOperationSelection(m *core.Model) (tea.Model, tea.Cmd) {
 // HandleApprovalSelection handles the selection of a pipeline approval
 func HandleApprovalSelection(m *core.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		newModel := *m
+		newModel := m.Clone()
 		for _, approval := range m.Approvals {
 			if approval.PipelineName == selected[0] &&
 				approval.StageName == selected[1] &&
 				approval.ActionName == selected[2] {
 				newModel.SelectedApproval = &approval
 				newModel.CurrentView = constants.ViewConfirmation
-				view.UpdateTableForView(&newModel)
-				return WrapModel(&newModel), nil
+				view.UpdateTableForView(newModel)
+				return WrapModel(newModel), nil
 			}
 		}
 	}
 	return WrapModel(m), nil
 }
 
-// HandleConfirmationSelection handles the confirmation of an action
+// HandleConfirmationSelection handles the selection of an approval action
 func HandleConfirmationSelection(m *core.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		newModel := *m
+		newModel := m.Clone()
 		if selected[0] == "Approve" {
 			newModel.ApproveAction = true
 			newModel.CurrentView = constants.ViewSummary
-			newModel.ManualInput = true // Set manual input mode directly
+			newModel.ManualInput = true
 			newModel.SetTextInputForApproval(true)
-			newModel.ApprovalComment = "" // Reset any previous comment
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
 		} else if selected[0] == "Reject" {
 			newModel.ApproveAction = false
 			newModel.CurrentView = constants.ViewSummary
-			newModel.ManualInput = true // Set manual input mode directly
+			newModel.ManualInput = true
 			newModel.SetTextInputForApproval(false)
-			newModel.ApprovalComment = "" // Reset any previous comment
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
 		}
-		view.UpdateTableForView(&newModel)
-		return WrapModel(&newModel), nil
 	}
 	return WrapModel(m), nil
 }
 
-// HandleSummaryConfirmation handles the confirmation of a summary
+// HandleSummaryConfirmation handles the confirmation of the summary
 func HandleSummaryConfirmation(m *core.Model) (tea.Model, tea.Cmd) {
-	if m.SelectedApproval != nil {
-		// For approval actions, check if we have a comment
-		if strings.TrimSpace(m.TextInput.Value()) == "" {
-			// No comment yet, keep the text input focused
-			newModel := *m
-			newModel.TextInput.Focus()
-			return WrapModel(&newModel), nil
+	if m.ManualInput {
+		// For manual input, just store the value and continue
+		newModel := m.Clone()
+
+		// Store the comment
+		if m.SelectedApproval != nil {
+			newModel.ApprovalComment = m.TextInput.Value()
+			newModel.Summary = m.TextInput.Value()
 		}
 
-		// We have a comment, store it and proceed to execution confirmation screen
-		newModel := *m
-		newModel.ApprovalComment = m.TextInput.Value() // Explicitly store the comment
-		newModel.CurrentView = constants.ViewExecutingAction
-		newModel.ManualInput = false
-		view.UpdateTableForView(&newModel)
-		return WrapModel(&newModel), nil
-	} else if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
-		if m.ManualInput && strings.TrimSpace(m.TextInput.Value()) == "" {
-			// No commit ID yet, keep the text input focused
-			newModel := *m
-			newModel.TextInput.Focus()
-			return WrapModel(&newModel), nil
-		}
-
-		// We have a commit ID or using latest, store it and proceed to execution confirmation screen
-		newModel := *m
-		if m.ManualInput {
-			newModel.CommitID = m.TextInput.Value() // Explicitly store the commit ID
+		// For pipeline execution with manual commit ID
+		if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
+			newModel.CommitID = m.TextInput.Value()
 			newModel.ManualCommitID = true
 		}
+
+		// Move to execution view
 		newModel.CurrentView = constants.ViewExecutingAction
 		newModel.ManualInput = false
-		view.UpdateTableForView(&newModel)
-		return WrapModel(&newModel), nil
+		view.UpdateTableForView(newModel)
+		return WrapModel(newModel), nil
 	}
 
+	// For non-manual input, check if we have a selected row
+	if selected := m.Table.SelectedRow(); len(selected) > 0 {
+		newModel := m.Clone()
+		if selected[0] == "Execute" {
+			// Start loading and execute the action
+			newModel.IsLoading = true
+			if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
+				return WrapModel(newModel), ExecutePipeline(m)
+			}
+			return WrapModel(newModel), ExecuteApproval(m)
+		} else if selected[0] == "Cancel" {
+			// Navigate back to the main menu
+			newModel.CurrentView = constants.ViewSelectOperation
+			newModel.SelectedApproval = nil
+			newModel.SelectedPipeline = nil
+			newModel.ApprovalComment = ""
+			newModel.CommitID = ""
+			newModel.ManualCommitID = false
+			newModel.ResetTextInput()
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
+		}
+	}
 	return WrapModel(m), nil
 }
 
 // HandleExecutionSelection handles the selection of an execution action
 func HandleExecutionSelection(m *core.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
+		newModel := m.Clone()
 		if selected[0] == "Execute" {
-			newModel := *m
+			// Start loading and execute the action
 			newModel.IsLoading = true
 			if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
-				newModel.LoadingMsg = constants.MsgStartingPipeline
-				return WrapModel(&newModel), ExecutePipeline(m)
-			} else if m.SelectedApproval != nil {
-				newModel.LoadingMsg = constants.MsgExecutingApproval
-				return WrapModel(&newModel), ExecuteApproval(m)
+				return WrapModel(newModel), ExecutePipeline(m)
 			}
+			return WrapModel(newModel), ExecuteApproval(m)
 		} else if selected[0] == "Cancel" {
-			return WrapModel(navigation.NavigateBack(m)), nil
+			// Navigate back to the main menu
+			newModel.CurrentView = constants.ViewSelectOperation
+			newModel.SelectedApproval = nil
+			newModel.SelectedPipeline = nil
+			newModel.ApprovalComment = ""
+			newModel.CommitID = ""
+			newModel.ManualCommitID = false
+			newModel.ResetTextInput()
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
 		}
 	}
 	return WrapModel(m), nil

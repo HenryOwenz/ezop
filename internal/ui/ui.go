@@ -39,38 +39,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.core.Width = msg.Width
-		m.core.Height = msg.Height
-		view.UpdateTableForView(m.core)
-		return m, nil
+		newModel := m.Clone()
+		newModel.core.Width = msg.Width
+		newModel.core.Height = msg.Height
+		view.UpdateTableForView(newModel.core)
+		return newModel, nil
 	case core.ErrMsg:
-		m.core.Err = msg.Err
-		m.core.IsLoading = false
-		return m, nil
+		newModel := m.Clone()
+		newModel.core.Err = msg.Err
+		newModel.core.IsLoading = false
+		return newModel, nil
 	case core.ApprovalsMsg:
-		m.core.Approvals = msg.Approvals
-		m.core.Provider = msg.Provider
-		m.core.CurrentView = constants.ViewApprovals
-		m.core.IsLoading = false
-		view.UpdateTableForView(m.core)
-		return m, nil
+		newModel := m.Clone()
+		newModel.core.Approvals = msg.Approvals
+		newModel.core.Provider = msg.Provider
+		newModel.core.CurrentView = constants.ViewApprovals
+		newModel.core.IsLoading = false
+		view.UpdateTableForView(newModel.core)
+		return newModel, nil
 	case core.ApprovalResultMsg:
-		m.core.IsLoading = false // Ensure loading is turned off
-		update.HandleApprovalResult(m.core, msg.Err)
-		view.UpdateTableForView(m.core)
-		return m, nil
+		newModel := m.Clone()
+		newModel.core.IsLoading = false // Ensure loading is turned off
+		update.HandleApprovalResult(newModel.core, msg.Err)
+		view.UpdateTableForView(newModel.core)
+		return newModel, nil
 	case core.PipelineExecutionMsg:
-		m.core.IsLoading = false // Ensure loading is turned off
-		update.HandlePipelineExecution(m.core, msg.Err)
-		view.UpdateTableForView(m.core)
-		return m, nil
+		newModel := m.Clone()
+		newModel.core.IsLoading = false // Ensure loading is turned off
+		update.HandlePipelineExecution(newModel.core, msg.Err)
+		view.UpdateTableForView(newModel.core)
+		return newModel, nil
 	case spinner.TickMsg:
+		newModel := m.Clone()
 		var cmd tea.Cmd
-		m.core.Spinner, cmd = m.core.Spinner.Update(msg)
-		if m.core.IsLoading {
+		newModel.core.Spinner, cmd = newModel.core.Spinner.Update(msg)
+		if newModel.core.IsLoading {
 			cmds = append(cmds, cmd)
 		}
-		return m, tea.Batch(cmds...)
+		return newModel, tea.Batch(cmds...)
 	case tea.KeyMsg:
 		// Ignore navigation key presses when loading
 		if m.core.IsLoading {
@@ -103,68 +109,75 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Only use '-' for back navigation if not in text input mode
 			if msg.String() == constants.KeyAltBack && m.core.ManualInput {
 				// If in text input mode, '-' should be treated as a character
+				newModel := m.Clone()
 				var cmd tea.Cmd
-				m.core.TextInput, cmd = m.core.TextInput.Update(msg)
-				return m, cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
 			}
 
 			// Handle back navigation
 			if m.core.ManualInput {
-				m.core.ManualInput = false
-				m.core.ResetTextInput()
-				view.UpdateTableForView(m.core)
-				return m, nil
+				newModel := m.Clone()
+				newModel.core.ManualInput = false
+				newModel.core.ResetTextInput()
+				view.UpdateTableForView(newModel.core)
+				return newModel, nil
 			}
-			model := navigation.NavigateBack(m.core)
-			view.UpdateTableForView(model)
-			return Model{core: model}, nil
+			newCore := navigation.NavigateBack(m.core)
+			view.UpdateTableForView(newCore)
+			return Model{core: newCore}, nil
 		case constants.KeyUp, constants.KeyAltUp:
-			m.core.Table.MoveUp(1)
-			return m, nil
+			newModel := m.Clone()
+			newModel.core.Table.MoveUp(1)
+			return newModel, nil
 		case constants.KeyDown, constants.KeyAltDown:
-			m.core.Table.MoveDown(1)
-			return m, nil
+			newModel := m.Clone()
+			newModel.core.Table.MoveDown(1)
+			return newModel, nil
 		case constants.KeyTab:
 			// Tab is now only used for other views, not AWS config
 			if m.core.CurrentView == constants.ViewSummary {
-				if m.core.ManualInput {
-					m.core.ManualInput = false
-					m.core.ResetTextInput()
+				newModel := m.Clone()
+				if newModel.core.ManualInput {
+					newModel.core.ManualInput = false
+					newModel.core.ResetTextInput()
 				} else {
-					m.core.ManualInput = true
-					m.core.TextInput.Focus()
+					newModel.core.ManualInput = true
+					newModel.core.TextInput.Focus()
 				}
-				return m, nil
+				return newModel, nil
 			}
 			return m, nil
 		default:
 			if m.core.ManualInput {
+				newModel := m.Clone()
 				var cmd tea.Cmd
-				m.core.TextInput, cmd = m.core.TextInput.Update(msg)
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
 
 				// If we're in the summary view with manual commit ID
-				if m.core.CurrentView == constants.ViewSummary && m.core.SelectedOperation != nil &&
-					m.core.SelectedOperation.Name == "Start Pipeline" && m.core.ManualInput {
-					m.core.CommitID = m.core.TextInput.Value()
-					m.core.ManualCommitID = true
+				if newModel.core.CurrentView == constants.ViewSummary && newModel.core.SelectedOperation != nil &&
+					newModel.core.SelectedOperation.Name == "Start Pipeline" && newModel.core.ManualInput {
+					newModel.core.CommitID = newModel.core.TextInput.Value()
+					newModel.core.ManualCommitID = true
 				}
 
 				// If we're in the summary view with approval comment
-				if m.core.CurrentView == constants.ViewSummary && m.core.SelectedApproval != nil {
-					m.core.ApprovalComment = m.core.TextInput.Value()
+				if newModel.core.CurrentView == constants.ViewSummary && newModel.core.SelectedApproval != nil {
+					newModel.core.ApprovalComment = newModel.core.TextInput.Value()
 				}
 
 				// For AWS config view, the actual setting happens when Enter is pressed in HandleEnter
-				return m, cmd
+				return newModel, cmd
 			}
 		}
 	case core.PipelineStatusMsg:
-		m.core.Pipelines = msg.Pipelines
-		m.core.Provider = msg.Provider
-		m.core.CurrentView = constants.ViewPipelineStatus
-		m.core.IsLoading = false
-		view.UpdateTableForView(m.core)
-		return m, nil
+		newModel := m.Clone()
+		newModel.core.Pipelines = msg.Pipelines
+		newModel.core.Provider = msg.Provider
+		newModel.core.CurrentView = constants.ViewPipelineStatus
+		newModel.core.IsLoading = false
+		view.UpdateTableForView(newModel.core)
+		return newModel, nil
 	}
 
 	// If we're loading, make sure to keep the spinner spinning
@@ -178,4 +191,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View renders the UI
 func (m Model) View() string {
 	return view.Render(m.core)
+}
+
+// Clone creates a deep copy of the model
+func (m Model) Clone() Model {
+	return Model{
+		core: m.core.Clone(),
+	}
 }
