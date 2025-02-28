@@ -2,13 +2,17 @@ package providers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/HenryOwenz/cloudgate/internal/cloud"
+	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 )
 
 // CloudProviderAdapter adapts a cloud.Provider to a providers.Provider.
 type CloudProviderAdapter struct {
 	provider cloud.Provider
+	profile  string
+	region   string
 }
 
 // NewCloudProviderAdapter creates a new adapter for a cloud.Provider.
@@ -45,12 +49,77 @@ func (a *CloudProviderAdapter) GetProfiles() ([]string, error) {
 
 // LoadConfig loads the provider configuration with the given profile and region.
 func (a *CloudProviderAdapter) LoadConfig(profile, region string) error {
+	a.profile = profile
+	a.region = region
 	return a.provider.LoadConfig(profile, region)
+}
+
+// GetAuthenticationMethods returns the available authentication methods
+func (a *CloudProviderAdapter) GetAuthenticationMethods() []string {
+	// AWS doesn't need explicit authentication methods
+	return []string{}
+}
+
+// GetAuthConfigKeys returns the configuration keys required for an authentication method
+func (a *CloudProviderAdapter) GetAuthConfigKeys(method string) []string {
+	// AWS doesn't need auth config keys
+	return []string{}
+}
+
+// Authenticate authenticates with the provider using the given method and configuration
+func (a *CloudProviderAdapter) Authenticate(method string, authConfig map[string]string) error {
+	// AWS doesn't need explicit authentication
+	return nil
+}
+
+// IsAuthenticated returns whether the provider is authenticated
+func (a *CloudProviderAdapter) IsAuthenticated() bool {
+	// AWS is always "authenticated" if we have a profile and region
+	return a.profile != "" && a.region != ""
+}
+
+// GetConfigKeys returns the configuration keys required by this provider
+func (a *CloudProviderAdapter) GetConfigKeys() []string {
+	return []string{constants.AWSProfileKey, constants.AWSRegionKey}
+}
+
+// GetConfigOptions returns the available options for a configuration key
+func (a *CloudProviderAdapter) GetConfigOptions(key string) ([]string, error) {
+	switch key {
+	case constants.AWSProfileKey:
+		return a.GetProfiles()
+	case constants.AWSRegionKey:
+		return constants.DefaultAWSRegions, nil
+	default:
+		return nil, fmt.Errorf("unknown config key: %s", key)
+	}
+}
+
+// Configure configures the provider with the given configuration
+func (a *CloudProviderAdapter) Configure(config map[string]string) error {
+	profile, ok := config[constants.AWSProfileKey]
+	if !ok || profile == "" {
+		return fmt.Errorf("profile is required")
+	}
+
+	region, ok := config[constants.AWSRegionKey]
+	if !ok || region == "" {
+		return fmt.Errorf("region is required")
+	}
+
+	return a.LoadConfig(profile, region)
 }
 
 // CloudServiceAdapter adapts a cloud.Service to a providers.Service.
 type CloudServiceAdapter struct {
 	service cloud.Service
+}
+
+// NewCloudServiceAdapter creates a new adapter for a cloud.Service.
+func NewCloudServiceAdapter(service cloud.Service) *CloudServiceAdapter {
+	return &CloudServiceAdapter{
+		service: service,
+	}
 }
 
 // Name returns the service's name.
@@ -76,6 +145,13 @@ func (a *CloudServiceAdapter) Categories() []Category {
 // CloudCategoryAdapter adapts a cloud.Category to a providers.Category.
 type CloudCategoryAdapter struct {
 	category cloud.Category
+}
+
+// NewCloudCategoryAdapter creates a new adapter for a cloud.Category.
+func NewCloudCategoryAdapter(category cloud.Category) *CloudCategoryAdapter {
+	return &CloudCategoryAdapter{
+		category: category,
+	}
 }
 
 // Name returns the category's name.
@@ -106,6 +182,13 @@ func (a *CloudCategoryAdapter) IsUIVisible() bool {
 // CloudOperationAdapter adapts a cloud.Operation to a providers.Operation.
 type CloudOperationAdapter struct {
 	operation cloud.Operation
+}
+
+// NewCloudOperationAdapter creates a new adapter for a cloud.Operation.
+func NewCloudOperationAdapter(operation cloud.Operation) *CloudOperationAdapter {
+	return &CloudOperationAdapter{
+		operation: operation,
+	}
 }
 
 // Name returns the operation's name.

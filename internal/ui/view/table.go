@@ -39,6 +39,19 @@ func getColumnsForView(m *model.Model) []table.Column {
 			{Title: "Provider", Width: constants.TableDefaultWidth},
 			{Title: "Description", Width: constants.TableDescWidth},
 		}
+	case constants.ViewAuthMethodSelect:
+		return []table.Column{
+			{Title: "Authentication Method", Width: constants.TableDefaultWidth},
+			{Title: "Description", Width: constants.TableDescWidth},
+		}
+	case constants.ViewAuthConfig:
+		return []table.Column{
+			{Title: m.ProviderState.AuthState.CurrentAuthConfigKey, Width: constants.TableDefaultWidth},
+		}
+	case constants.ViewProviderConfig:
+		return []table.Column{
+			{Title: m.ProviderState.CurrentConfigKey, Width: constants.TableDefaultWidth},
+		}
 	case constants.ViewAWSConfig:
 		if m.AwsProfile == "" {
 			return []table.Column{{Title: "Profile", Width: constants.TableDefaultWidth}}
@@ -113,6 +126,39 @@ func getRowsForView(m *model.Model) []table.Row {
 			rows[i] = table.Row{provider.Name(), provider.Description()}
 		}
 
+		return rows
+	case constants.ViewAuthMethodSelect:
+		rows := make([]table.Row, len(m.ProviderState.AuthState.AvailableMethods))
+		for i, method := range m.ProviderState.AuthState.AvailableMethods {
+			description := getAuthMethodDescription(m.ProviderState.ProviderName, method)
+			rows[i] = table.Row{method, description}
+		}
+		return rows
+	case constants.ViewAuthConfig:
+		key := m.ProviderState.AuthState.CurrentAuthConfigKey
+		options, ok := m.ProviderState.ConfigOptions[key]
+		if !ok {
+			return []table.Row{}
+		}
+
+		rows := make([]table.Row, len(options)+1)
+		rows[0] = table.Row{"Manual Entry"}
+		for i, option := range options {
+			rows[i+1] = table.Row{option}
+		}
+		return rows
+	case constants.ViewProviderConfig:
+		key := m.ProviderState.CurrentConfigKey
+		options, ok := m.ProviderState.ConfigOptions[key]
+		if !ok {
+			return []table.Row{}
+		}
+
+		rows := make([]table.Row, len(options)+1)
+		rows[0] = table.Row{"Manual Entry"}
+		for i, option := range options {
+			rows[i+1] = table.Row{option}
+		}
 		return rows
 	case constants.ViewAWSConfig:
 		if m.AwsProfile == "" {
@@ -312,4 +358,29 @@ func getRowsForView(m *model.Model) []table.Row {
 	default:
 		return []table.Row{}
 	}
+}
+
+// getAuthMethodDescription returns a description for an authentication method
+func getAuthMethodDescription(providerName, method string) string {
+	descriptions := map[string]map[string]string{
+		"AWS": {
+			"profile": "Use AWS profile from ~/.aws/credentials",
+		},
+		"Azure": {
+			"cli":        "Use Azure CLI authentication",
+			"config-dir": "Use Azure configuration directory",
+		},
+		"GCP": {
+			"service-account": "Use GCP service account key file",
+			"adc":             "Use Application Default Credentials",
+		},
+	}
+
+	if providerDescriptions, ok := descriptions[providerName]; ok {
+		if description, ok := providerDescriptions[method]; ok {
+			return description
+		}
+	}
+
+	return ""
 }

@@ -31,12 +31,6 @@ type Model struct {
 	Error       string // Error message
 	Success     string // Success message
 
-	// AWS Configuration
-	AwsProfile string
-	AwsRegion  string
-	Profiles   []string
-	Regions    []string
-
 	// Loading state
 	IsLoading  bool
 	LoadingMsg string
@@ -44,15 +38,24 @@ type Model struct {
 	// Provider Registry
 	Registry *providers.ProviderRegistry
 
-	// AWS Resources (legacy)
-	Provider   *aws.Provider
-	Approvals  []aws.ApprovalAction
-	Pipelines  []aws.PipelineStatus
-	Services   []Service
-	Categories []Category
-	Operations []Operation
+	// Provider state
+	ProviderState ProviderState
 
-	// Selection state
+	// Input state
+	InputState InputState
+
+	// Legacy fields for backward compatibility
+	// These will be gradually migrated to the new structure
+	AwsProfile        string
+	AwsRegion         string
+	Profiles          []string
+	Regions           []string
+	Provider          *aws.Provider
+	Approvals         []aws.ApprovalAction
+	Pipelines         []aws.PipelineStatus
+	Services          []Service
+	Categories        []Category
+	Operations        []Operation
 	SelectedService   *Service
 	SelectedCategory  *Category
 	SelectedOperation *Operation
@@ -60,11 +63,89 @@ type Model struct {
 	ApproveAction     bool
 	Summary           string
 	SelectedPipeline  *aws.PipelineStatus
+	ManualCommitID    bool
+	CommitID          string
+	ApprovalComment   string
+}
 
-	// Input state
-	ManualCommitID  bool
-	CommitID        string
-	ApprovalComment string
+// ProviderState represents the state of the selected provider, service, category, and operation
+type ProviderState struct {
+	// Selected provider
+	ProviderName string
+
+	// Provider configuration
+	Config map[string]string // Generic configuration (e.g., "profile", "region")
+
+	// Available configuration options
+	ConfigOptions map[string][]string // e.g., "profile" -> ["default", "dev", "prod"]
+
+	// Current configuration key being set
+	CurrentConfigKey string
+
+	// Authentication state
+	AuthState AuthenticationState
+
+	// Selected service, category, and operation
+	SelectedService   *ServiceInfo
+	SelectedCategory  *CategoryInfo
+	SelectedOperation *OperationInfo
+
+	// Provider-specific state (stored as generic interface{})
+	ProviderSpecificState map[string]interface{}
+}
+
+// AuthenticationState represents the authentication state for different providers
+type AuthenticationState struct {
+	// Current authentication method
+	Method string
+
+	// Authentication configuration
+	AuthConfig map[string]string
+
+	// Available authentication methods
+	AvailableMethods []string
+
+	// Current authentication config key being set
+	CurrentAuthConfigKey string
+
+	// Authentication status
+	IsAuthenticated bool
+
+	// Error message if authentication failed
+	AuthError string
+}
+
+// ServiceInfo represents information about a service
+type ServiceInfo struct {
+	ID          string
+	Name        string
+	Description string
+	Available   bool
+}
+
+// CategoryInfo represents information about a category
+type CategoryInfo struct {
+	ID          string
+	Name        string
+	Description string
+	Available   bool
+}
+
+// OperationInfo represents information about an operation
+type OperationInfo struct {
+	ID          string
+	Name        string
+	Description string
+}
+
+// InputState represents the state of user input
+type InputState struct {
+	// Generic input fields
+	TextValues map[string]string // e.g., "comment" -> "This is a comment"
+	BoolValues map[string]bool   // e.g., "approve" -> true
+
+	// Operation-specific state
+	OperationState map[string]interface{} // Operation-specific state
 }
 
 // New creates and initializes a new Model
@@ -91,7 +172,24 @@ func New() *Model {
 		CurrentView: constants.ViewProviders,
 		Styles:      styles.DefaultStyles(),
 		Registry:    providers.NewProviderRegistry(),
-		// Initialize empty slices to avoid nil pointer issues
+
+		// Initialize new state structures
+		ProviderState: ProviderState{
+			Config:                make(map[string]string),
+			ConfigOptions:         make(map[string][]string),
+			ProviderSpecificState: make(map[string]interface{}),
+			AuthState: AuthenticationState{
+				AuthConfig:       make(map[string]string),
+				AvailableMethods: []string{},
+			},
+		},
+		InputState: InputState{
+			TextValues:     make(map[string]string),
+			BoolValues:     make(map[string]bool),
+			OperationState: make(map[string]interface{}),
+		},
+
+		// Initialize legacy fields
 		Profiles:   []string{},
 		Regions:    []string{},
 		Approvals:  []aws.ApprovalAction{},
@@ -137,5 +235,265 @@ func (m *Model) SetTextInputForApproval(isApproval bool) {
 // Clone creates a deep copy of the model
 func (m *Model) Clone() *Model {
 	newModel := *m
+
+	// Deep copy maps in ProviderState
+	newModel.ProviderState.Config = make(map[string]string)
+	for k, v := range m.ProviderState.Config {
+		newModel.ProviderState.Config[k] = v
+	}
+
+	newModel.ProviderState.ConfigOptions = make(map[string][]string)
+	for k, v := range m.ProviderState.ConfigOptions {
+		newOptions := make([]string, len(v))
+		copy(newOptions, v)
+		newModel.ProviderState.ConfigOptions[k] = newOptions
+	}
+
+	newModel.ProviderState.ProviderSpecificState = make(map[string]interface{})
+	for k, v := range m.ProviderState.ProviderSpecificState {
+		newModel.ProviderState.ProviderSpecificState[k] = v
+	}
+
+	newModel.ProviderState.AuthState.AuthConfig = make(map[string]string)
+	for k, v := range m.ProviderState.AuthState.AuthConfig {
+		newModel.ProviderState.AuthState.AuthConfig[k] = v
+	}
+
+	newModel.ProviderState.AuthState.AvailableMethods = make([]string, len(m.ProviderState.AuthState.AvailableMethods))
+	copy(newModel.ProviderState.AuthState.AvailableMethods, m.ProviderState.AuthState.AvailableMethods)
+
+	// Deep copy maps in InputState
+	newModel.InputState.TextValues = make(map[string]string)
+	for k, v := range m.InputState.TextValues {
+		newModel.InputState.TextValues[k] = v
+	}
+
+	newModel.InputState.BoolValues = make(map[string]bool)
+	for k, v := range m.InputState.BoolValues {
+		newModel.InputState.BoolValues[k] = v
+	}
+
+	newModel.InputState.OperationState = make(map[string]interface{})
+	for k, v := range m.InputState.OperationState {
+		newModel.InputState.OperationState[k] = v
+	}
+
 	return &newModel
+}
+
+// Helper methods for working with the model
+func (m *Model) SetProviderConfig(key, value string) {
+	m.ProviderState.Config[key] = value
+}
+
+func (m *Model) GetProviderConfig(key string) string {
+	return m.ProviderState.Config[key]
+}
+
+func (m *Model) SetAuthConfig(key, value string) {
+	m.ProviderState.AuthState.AuthConfig[key] = value
+}
+
+func (m *Model) GetAuthConfig(key string) string {
+	return m.ProviderState.AuthState.AuthConfig[key]
+}
+
+func (m *Model) SetInputText(key, value string) {
+	m.InputState.TextValues[key] = value
+}
+
+func (m *Model) GetInputText(key string) string {
+	return m.InputState.TextValues[key]
+}
+
+func (m *Model) SetInputBool(key string, value bool) {
+	m.InputState.BoolValues[key] = value
+}
+
+func (m *Model) GetInputBool(key string) bool {
+	return m.InputState.BoolValues[key]
+}
+
+// Backward compatibility methods
+
+// GetAwsProfile returns the AWS profile from the provider config
+func (m *Model) GetAwsProfile() string {
+	// First check the new structure
+	profile := m.GetProviderConfig("profile")
+	if profile != "" {
+		return profile
+	}
+	// Fall back to legacy field
+	return m.AwsProfile
+}
+
+// SetAwsProfile sets the AWS profile in the provider config
+func (m *Model) SetAwsProfile(profile string) {
+	m.SetProviderConfig("profile", profile)
+	// Also set in legacy field for backward compatibility
+	m.AwsProfile = profile
+}
+
+// GetAwsRegion returns the AWS region from the provider config
+func (m *Model) GetAwsRegion() string {
+	// First check the new structure
+	region := m.GetProviderConfig("region")
+	if region != "" {
+		return region
+	}
+	// Fall back to legacy field
+	return m.AwsRegion
+}
+
+// SetAwsRegion sets the AWS region in the provider config
+func (m *Model) SetAwsRegion(region string) {
+	m.SetProviderConfig("region", region)
+	// Also set in legacy field for backward compatibility
+	m.AwsRegion = region
+}
+
+// GetApprovalComment returns the approval comment from the input state
+func (m *Model) GetApprovalComment() string {
+	// First check the new structure
+	comment := m.GetInputText("approval-comment")
+	if comment != "" {
+		return comment
+	}
+	// Fall back to legacy field
+	return m.ApprovalComment
+}
+
+// SetApprovalComment sets the approval comment in the input state
+func (m *Model) SetApprovalComment(comment string) {
+	m.SetInputText("approval-comment", comment)
+	// Also set in legacy field for backward compatibility
+	m.ApprovalComment = comment
+}
+
+// GetApproveAction returns the approve action from the input state
+func (m *Model) GetApproveAction() bool {
+	// First check the new structure
+	if _, ok := m.InputState.BoolValues["approve-action"]; ok {
+		return m.GetInputBool("approve-action")
+	}
+	// Fall back to legacy field
+	return m.ApproveAction
+}
+
+// SetApproveAction sets the approve action in the input state
+func (m *Model) SetApproveAction(approve bool) {
+	m.SetInputBool("approve-action", approve)
+	// Also set in legacy field for backward compatibility
+	m.ApproveAction = approve
+}
+
+// GetCommitID returns the commit ID from the input state
+func (m *Model) GetCommitID() string {
+	// First check the new structure
+	commitID := m.GetInputText("commit-id")
+	if commitID != "" {
+		return commitID
+	}
+	// Fall back to legacy field
+	return m.CommitID
+}
+
+// SetCommitID sets the commit ID in the input state
+func (m *Model) SetCommitID(commitID string) {
+	m.SetInputText("commit-id", commitID)
+	// Also set in legacy field for backward compatibility
+	m.CommitID = commitID
+}
+
+// GetManualCommitID returns whether to use manual commit ID
+func (m *Model) GetManualCommitID() bool {
+	// First check the new structure
+	if _, ok := m.InputState.BoolValues["manual-commit-id"]; ok {
+		return m.GetInputBool("manual-commit-id")
+	}
+	// Fall back to legacy field
+	return m.ManualCommitID
+}
+
+// SetManualCommitID sets whether to use manual commit ID
+func (m *Model) SetManualCommitID(manual bool) {
+	m.SetInputBool("manual-commit-id", manual)
+	// Also set in legacy field for backward compatibility
+	m.ManualCommitID = manual
+}
+
+// GetSelectedApproval returns the selected approval from the provider-specific state
+func (m *Model) GetSelectedApproval() *aws.ApprovalAction {
+	// First check the new structure
+	if approval, ok := m.ProviderState.ProviderSpecificState["selected-approval"]; ok {
+		if typedApproval, ok := approval.(*aws.ApprovalAction); ok {
+			return typedApproval
+		}
+	}
+	// Fall back to legacy field
+	return m.SelectedApproval
+}
+
+// SetSelectedApproval sets the selected approval in the provider-specific state
+func (m *Model) SetSelectedApproval(approval *aws.ApprovalAction) {
+	m.ProviderState.ProviderSpecificState["selected-approval"] = approval
+	// Also set in legacy field for backward compatibility
+	m.SelectedApproval = approval
+}
+
+// GetSelectedPipeline returns the selected pipeline from the provider-specific state
+func (m *Model) GetSelectedPipeline() *aws.PipelineStatus {
+	// First check the new structure
+	if pipeline, ok := m.ProviderState.ProviderSpecificState["selected-pipeline"]; ok {
+		if typedPipeline, ok := pipeline.(*aws.PipelineStatus); ok {
+			return typedPipeline
+		}
+	}
+	// Fall back to legacy field
+	return m.SelectedPipeline
+}
+
+// SetSelectedPipeline sets the selected pipeline in the provider-specific state
+func (m *Model) SetSelectedPipeline(pipeline *aws.PipelineStatus) {
+	m.ProviderState.ProviderSpecificState["selected-pipeline"] = pipeline
+	// Also set in legacy field for backward compatibility
+	m.SelectedPipeline = pipeline
+}
+
+// GetApprovals returns the approvals from the provider-specific state
+func (m *Model) GetApprovals() []aws.ApprovalAction {
+	// First check the new structure
+	if approvals, ok := m.ProviderState.ProviderSpecificState["approvals"]; ok {
+		if typedApprovals, ok := approvals.([]aws.ApprovalAction); ok {
+			return typedApprovals
+		}
+	}
+	// Fall back to legacy field
+	return m.Approvals
+}
+
+// SetApprovals sets the approvals in the provider-specific state
+func (m *Model) SetApprovals(approvals []aws.ApprovalAction) {
+	m.ProviderState.ProviderSpecificState["approvals"] = approvals
+	// Also set in legacy field for backward compatibility
+	m.Approvals = approvals
+}
+
+// GetPipelines returns the pipelines from the provider-specific state
+func (m *Model) GetPipelines() []aws.PipelineStatus {
+	// First check the new structure
+	if pipelines, ok := m.ProviderState.ProviderSpecificState["pipelines"]; ok {
+		if typedPipelines, ok := pipelines.([]aws.PipelineStatus); ok {
+			return typedPipelines
+		}
+	}
+	// Fall back to legacy field
+	return m.Pipelines
+}
+
+// SetPipelines sets the pipelines in the provider-specific state
+func (m *Model) SetPipelines(pipelines []aws.PipelineStatus) {
+	m.ProviderState.ProviderSpecificState["pipelines"] = pipelines
+	// Also set in legacy field for backward compatibility
+	m.Pipelines = pipelines
 }

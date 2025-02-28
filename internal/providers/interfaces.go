@@ -22,6 +22,27 @@ type Provider interface {
 
 	// LoadConfig loads the provider configuration with the given profile and region
 	LoadConfig(profile, region string) error
+
+	// GetAuthenticationMethods returns the available authentication methods
+	GetAuthenticationMethods() []string
+
+	// GetAuthConfigKeys returns the configuration keys required for an authentication method
+	GetAuthConfigKeys(method string) []string
+
+	// Authenticate authenticates with the provider using the given method and configuration
+	Authenticate(method string, authConfig map[string]string) error
+
+	// IsAuthenticated returns whether the provider is authenticated
+	IsAuthenticated() bool
+
+	// GetConfigKeys returns the configuration keys required by this provider
+	GetConfigKeys() []string
+
+	// GetConfigOptions returns the available options for a configuration key
+	GetConfigOptions(key string) ([]string, error)
+
+	// Configure configures the provider with the given configuration
+	Configure(config map[string]string) error
 }
 
 // Service interface defines methods that all cloud services must implement

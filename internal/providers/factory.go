@@ -12,8 +12,8 @@ func InitializeProviders(registry *ProviderRegistry) {
 	registry.Register(NewCloudProviderAdapter(aws.New()))
 
 	// TODO: Register other providers as they become available
-	// registry.Register(NewCloudProviderAdapter(azure.New()))
-	// registry.Register(NewCloudProviderAdapter(gcp.New()))
+	// registry.Register(azure.New())
+	// registry.Register(gcp.New())
 }
 
 // CreateProvider creates a provider with the given name, profile, and region.

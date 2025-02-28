@@ -18,4 +18,10 @@ const (
 	ViewError
 	ViewSuccess
 	ViewHelp
+
+	// New view states for the updated model
+	ViewAuthMethodSelect
+	ViewAuthConfig
+	ViewProviderConfig
+	ViewAuthError
 )
