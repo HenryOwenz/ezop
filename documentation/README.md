@@ -6,6 +6,7 @@ This directory contains documentation for the CloudGate project, including archi
 
 - [UI Visibility Pattern](ui_visibility_pattern.md) - Describes the pattern used to control which components are visible in the UI.
 - [Dual-Layer Architecture Pattern](dual_layer_architecture.md) - Explains the dual-layer architecture used for cloud provider implementations.
+- [Model Architecture](model_architecture.md) - Details the model architecture used to support multiple cloud providers.
 
 ## Documentation Guidelines
 

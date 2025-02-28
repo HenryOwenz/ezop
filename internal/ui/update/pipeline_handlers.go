@@ -24,3 +24,23 @@ func HandleApprovalSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	}
 	return WrapModel(m), nil
 }
+
+// HandlePipelineSelection handles the selection of a pipeline
+func HandlePipelineSelection(m *model.Model) (tea.Model, tea.Cmd) {
+	if selected := m.Table.SelectedRow(); len(selected) > 0 {
+		newModel := m.Clone()
+		for _, pipeline := range m.Pipelines {
+			if pipeline.Name == selected[0] {
+				newModel.SelectedPipeline = &pipeline
+				if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
+					newModel.CurrentView = constants.ViewSummary
+				} else {
+					newModel.CurrentView = constants.ViewPipelineStages
+				}
+				view.UpdateTableForView(newModel)
+				return WrapModel(newModel), nil
+			}
+		}
+	}
+	return WrapModel(m), nil
+}

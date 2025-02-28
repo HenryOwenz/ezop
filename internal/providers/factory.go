@@ -2,19 +2,27 @@ package providers
 
 import (
 	"fmt"
-
-	"github.com/HenryOwenz/cloudgate/internal/cloud/aws"
 )
 
 // InitializeProviders registers all available providers with the registry.
 func InitializeProviders(registry *ProviderRegistry) {
 	// Register AWS provider
-	registry.Register(NewCloudProviderAdapter(aws.New()))
+	// We'll use a direct approach to avoid import cycles
+	awsProvider := CreateAWSProvider()
+	if awsProvider != nil {
+		registry.Register(awsProvider)
+	} else {
+		panic("Failed to create AWS provider")
+	}
 
 	// TODO: Register other providers as they become available
-	// registry.Register(azure.New())
-	// registry.Register(gcp.New())
+	// RegisterAzureProvider(registry)
+	// RegisterGCPProvider(registry)
 }
+
+// CreateAWSProvider creates a new AWS provider.
+// This is a placeholder that will be replaced by the actual implementation.
+var CreateAWSProvider func() Provider
 
 // CreateProvider creates a provider with the given name, profile, and region.
 func CreateProvider(registry *ProviderRegistry, name, profile, region string) (Provider, error) {

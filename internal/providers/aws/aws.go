@@ -2,13 +2,7 @@ package aws
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -16,11 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline/types"
 )
-
-// Provider represents an AWS provider configuration.
-type Provider struct {
-	client *codepipeline.Client
-}
 
 // ApprovalAction represents a pending approval in a pipeline.
 type ApprovalAction struct {
@@ -43,89 +32,62 @@ type StageStatus struct {
 	LastUpdated string
 }
 
-// Common errors.
-var (
-	ErrLoadConfig     = errors.New("failed to load AWS config")
-	ErrListPipelines  = errors.New("failed to list pipelines")
-	ErrGetPipeline    = errors.New("failed to get pipeline details")
-	ErrPipelineState  = errors.New("failed to get pipeline state")
-	ErrApprovalResult = errors.New("failed to put approval result")
-)
-
-// New creates a new AWS provider with the given profile and region.
-func New(ctx context.Context, profile string, region string) (*Provider, error) {
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithSharedConfigProfile(profile),
-		config.WithRegion(region),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrLoadConfig, err)
-	}
-
-	return &Provider{
-		client: codepipeline.NewFromConfig(cfg),
-	}, nil
-}
-
 // GetPendingApprovals returns all pending manual approval actions.
 func (p *Provider) GetPendingApprovals(ctx context.Context) ([]ApprovalAction, error) {
-	pipelines, err := p.listPipelines(ctx)
+	// Create a new AWS SDK client
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithSharedConfigProfile(p.profile),
+		config.WithRegion(p.region),
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	client := codepipeline.NewFromConfig(cfg)
+
+	// List all pipelines
+	pipelineOutput, err := client.ListPipelines(ctx, &codepipeline.ListPipelinesInput{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pipelines: %w", err)
 	}
 
 	var approvals []ApprovalAction
 
-	for _, pipeline := range pipelines {
-		pipelineApprovals, err := p.getPipelineApprovals(ctx, pipeline)
+	// Check each pipeline for pending approvals
+	for _, pipeline := range pipelineOutput.Pipelines {
+		// Get pipeline details
+		pipelineOutput, err := client.GetPipeline(ctx, &codepipeline.GetPipelineInput{
+			Name: pipeline.Name,
+		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get pipeline details: %w", err)
 		}
 
+		// Get pipeline state
+		stateOutput, err := client.GetPipelineState(ctx, &codepipeline.GetPipelineStateInput{
+			Name: pipeline.Name,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get pipeline state: %w", err)
+		}
+
+		// Find pending approvals
+		pipelineApprovals := findPendingApprovals(*pipeline.Name, pipelineOutput.Pipeline.Stages, stateOutput.StageStates)
 		approvals = append(approvals, pipelineApprovals...)
 	}
 
 	return approvals, nil
 }
 
-// listPipelines returns a list of all pipelines.
-func (p *Provider) listPipelines(ctx context.Context) ([]types.PipelineSummary, error) {
-	pipelineOutput, err := p.client.ListPipelines(ctx, &codepipeline.ListPipelinesInput{})
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrListPipelines, err)
-	}
-
-	return pipelineOutput.Pipelines, nil
-}
-
-// getPipelineApprovals returns all pending approval actions for a given pipeline.
-func (p *Provider) getPipelineApprovals(ctx context.Context, pipeline types.PipelineSummary) ([]ApprovalAction, error) {
-	pipelineOutput, err := p.client.GetPipeline(ctx, &codepipeline.GetPipelineInput{
-		Name: pipeline.Name,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrGetPipeline, err)
-	}
-
-	stateOutput, err := p.client.GetPipelineState(ctx, &codepipeline.GetPipelineStateInput{
-		Name: pipeline.Name,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrPipelineState, err)
-	}
-
-	return p.findPendingApprovals(*pipeline.Name, pipelineOutput.Pipeline.Stages, stateOutput.StageStates), nil
-}
-
 // findPendingApprovals returns a list of pending approval actions from the given stages and their states.
-func (p *Provider) findPendingApprovals(pipelineName string, stages []types.StageDeclaration, stageStates []types.StageState) []ApprovalAction {
+func findPendingApprovals(pipelineName string, stages []types.StageDeclaration, stageStates []types.StageState) []ApprovalAction {
 	var approvals []ApprovalAction
-	actionTypes := p.buildActionTypeMap(stages)
-	stateMap := p.buildStageStateMap(stageStates)
+	actionTypes := buildActionTypeMap(stages)
+	stateMap := buildStageStateMap(stageStates)
 
 	for _, stage := range stages {
 		if state, ok := stateMap[*stage.Name]; ok {
-			approvals = append(approvals, p.findStageApprovals(pipelineName, stage, state, actionTypes)...)
+			approvals = append(approvals, findStageApprovals(pipelineName, stage, state, actionTypes)...)
 		}
 	}
 
@@ -133,7 +95,7 @@ func (p *Provider) findPendingApprovals(pipelineName string, stages []types.Stag
 }
 
 // buildActionTypeMap creates a map of action names to their categories for quick lookup.
-func (p *Provider) buildActionTypeMap(stages []types.StageDeclaration) map[string]types.ActionCategory {
+func buildActionTypeMap(stages []types.StageDeclaration) map[string]types.ActionCategory {
 	actionTypes := make(map[string]types.ActionCategory)
 	for _, stage := range stages {
 		for _, action := range stage.Actions {
@@ -145,7 +107,7 @@ func (p *Provider) buildActionTypeMap(stages []types.StageDeclaration) map[strin
 }
 
 // buildStageStateMap creates a map of stage names to their states for quick lookup.
-func (p *Provider) buildStageStateMap(stageStates []types.StageState) map[string]types.StageState {
+func buildStageStateMap(stageStates []types.StageState) map[string]types.StageState {
 	stateMap := make(map[string]types.StageState)
 	for _, state := range stageStates {
 		stateMap[*state.StageName] = state
@@ -155,10 +117,10 @@ func (p *Provider) buildStageStateMap(stageStates []types.StageState) map[string
 }
 
 // findStageApprovals returns a list of pending approval actions from a single stage.
-func (p *Provider) findStageApprovals(pipelineName string, stage types.StageDeclaration, state types.StageState, actionTypes map[string]types.ActionCategory) []ApprovalAction {
+func findStageApprovals(pipelineName string, stage types.StageDeclaration, state types.StageState, actionTypes map[string]types.ActionCategory) []ApprovalAction {
 	var approvals []ApprovalAction
 	for _, actionState := range state.ActionStates {
-		if p.isApprovalAction(actionState, actionTypes) {
+		if isApprovalAction(actionState, actionTypes) {
 			approval := ApprovalAction{
 				PipelineName: pipelineName,
 				StageName:    *stage.Name,
@@ -173,7 +135,7 @@ func (p *Provider) findStageApprovals(pipelineName string, stage types.StageDecl
 }
 
 // isApprovalAction checks if the given action state represents a pending manual approval.
-func (p *Provider) isApprovalAction(actionState types.ActionState, actionTypes map[string]types.ActionCategory) bool {
+func isApprovalAction(actionState types.ActionState, actionTypes map[string]types.ActionCategory) bool {
 	return actionState.LatestExecution != nil &&
 		actionState.LatestExecution.Token != nil &&
 		actionState.LatestExecution.Status == types.ActionExecutionStatusInProgress &&
@@ -182,12 +144,23 @@ func (p *Provider) isApprovalAction(actionState types.ActionState, actionTypes m
 
 // PutApprovalResult handles the approval or rejection of a manual approval action.
 func (p *Provider) PutApprovalResult(ctx context.Context, action ApprovalAction, approved bool, comment string) error {
+	// Create a new AWS SDK client
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithSharedConfigProfile(p.profile),
+		config.WithRegion(p.region),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	client := codepipeline.NewFromConfig(cfg)
+
 	status := types.ApprovalStatusApproved
 	if !approved {
 		status = types.ApprovalStatusRejected
 	}
 
-	_, err := p.client.PutApprovalResult(ctx, &codepipeline.PutApprovalResultInput{
+	_, err = client.PutApprovalResult(ctx, &codepipeline.PutApprovalResultInput{
 		ActionName:   aws.String(action.ActionName),
 		PipelineName: aws.String(action.PipelineName),
 		Result: &types.ApprovalResult{
@@ -198,69 +171,36 @@ func (p *Provider) PutApprovalResult(ctx context.Context, action ApprovalAction,
 		Token:     aws.String(action.Token),
 	})
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrApprovalResult, err)
+		return fmt.Errorf("failed to put approval result: %w", err)
 	}
 
 	return nil
 }
 
-// GetProfiles returns a list of available AWS profiles.
-func GetProfiles() []string {
-	// Get user's home directory
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return []string{"default"}
-	}
-
-	// Try both config and credentials files
-	configFiles := []string{
-		filepath.Join(home, ".aws", "config"),
-		filepath.Join(home, ".aws", "credentials"),
-	}
-
-	var profiles []string
-	profileMap := make(map[string]bool)
-
-	for _, file := range configFiles {
-		content, err := os.ReadFile(file)
-		if err != nil {
-			continue
-		}
-
-		// Parse profiles using regex
-		re := regexp.MustCompile(`\[(.*?)\]`)
-		matches := re.FindAllStringSubmatch(string(content), -1)
-		for _, match := range matches {
-			profile := strings.TrimSpace(match[1])
-			// Remove "profile " prefix if present (used in config file)
-			profile = strings.TrimPrefix(profile, "profile ")
-			if profile != "" && !profileMap[profile] {
-				profileMap[profile] = true
-				profiles = append(profiles, profile)
-			}
-		}
-	}
-
-	// If no profiles found, return default
-	if len(profiles) == 0 {
-		return []string{"default"}
-	}
-
-	sort.Strings(profiles)
-	return profiles
-}
-
 // GetPipelineStatus returns the status of all pipelines
 func (p *Provider) GetPipelineStatus(ctx context.Context) ([]PipelineStatus, error) {
-	pipelines, err := p.listPipelines(ctx)
+	// Create a new AWS SDK client
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithSharedConfigProfile(p.profile),
+		config.WithRegion(p.region),
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	client := codepipeline.NewFromConfig(cfg)
+
+	// List all pipelines
+	pipelineOutput, err := client.ListPipelines(ctx, &codepipeline.ListPipelinesInput{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pipelines: %w", err)
 	}
 
 	var pipelineStatuses []PipelineStatus
 
-	for _, pipeline := range pipelines {
-		status, err := p.getPipelineStatus(ctx, pipeline)
+	// Get status for each pipeline
+	for _, pipeline := range pipelineOutput.Pipelines {
+		status, err := getPipelineStatus(ctx, client, pipeline)
 		if err != nil {
 			return nil, err
 		}
@@ -271,12 +211,12 @@ func (p *Provider) GetPipelineStatus(ctx context.Context) ([]PipelineStatus, err
 }
 
 // getPipelineStatus returns the status of a single pipeline
-func (p *Provider) getPipelineStatus(ctx context.Context, pipeline types.PipelineSummary) (PipelineStatus, error) {
-	stateOutput, err := p.client.GetPipelineState(ctx, &codepipeline.GetPipelineStateInput{
+func getPipelineStatus(ctx context.Context, client *codepipeline.Client, pipeline types.PipelineSummary) (PipelineStatus, error) {
+	stateOutput, err := client.GetPipelineState(ctx, &codepipeline.GetPipelineStateInput{
 		Name: pipeline.Name,
 	})
 	if err != nil {
-		return PipelineStatus{}, fmt.Errorf("%w: %w", ErrPipelineState, err)
+		return PipelineStatus{}, fmt.Errorf("failed to get pipeline state: %w", err)
 	}
 
 	status := PipelineStatus{
@@ -316,6 +256,17 @@ func (p *Provider) getPipelineStatus(ctx context.Context, pipeline types.Pipelin
 
 // StartPipelineExecution starts a pipeline execution with optional source revision
 func (p *Provider) StartPipelineExecution(ctx context.Context, pipelineName string, commitID string) error {
+	// Create a new AWS SDK client
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithSharedConfigProfile(p.profile),
+		config.WithRegion(p.region),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	client := codepipeline.NewFromConfig(cfg)
+
 	input := &codepipeline.StartPipelineExecutionInput{
 		Name: aws.String(pipelineName),
 	}
@@ -331,7 +282,7 @@ func (p *Provider) StartPipelineExecution(ctx context.Context, pipelineName stri
 		}
 	}
 
-	_, err := p.client.StartPipelineExecution(ctx, input)
+	_, err = client.StartPipelineExecution(ctx, input)
 	if err != nil {
 		return fmt.Errorf("failed to start pipeline execution: %w", err)
 	}

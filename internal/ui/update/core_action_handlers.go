@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/HenryOwenz/cloudgate/internal/aws"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
@@ -16,19 +15,30 @@ func UpdateModelForView(m *model.Model) error {
 	switch m.CurrentView {
 	case constants.ViewAWSConfig:
 		if m.AwsProfile == "" {
-			profiles := aws.GetProfiles()
+			// Get profiles from the registry
+			provider, err := m.Registry.Get("AWS")
+			if err != nil {
+				return err
+			}
+			profiles, err := provider.GetProfiles()
+			if err != nil {
+				return err
+			}
 			m.Profiles = profiles
 		} else {
 			m.Regions = constants.DefaultAWSRegions
 		}
 	case constants.ViewApprovals:
 		if len(m.Approvals) == 0 {
-			provider, err := aws.New(context.Background(), m.AwsProfile, m.AwsRegion)
+			// Get the provider from the registry
+			provider, err := m.Registry.Get("AWS")
 			if err != nil {
 				return err
 			}
 
-			approvals, err := provider.GetPendingApprovals(context.Background())
+			// Get approvals from the provider
+			ctx := context.Background()
+			approvals, err := provider.GetApprovals(ctx)
 			if err != nil {
 				return err
 			}
@@ -38,12 +48,15 @@ func UpdateModelForView(m *model.Model) error {
 		}
 	case constants.ViewPipelineStatus:
 		if len(m.Pipelines) == 0 {
-			provider, err := aws.New(context.Background(), m.AwsProfile, m.AwsRegion)
+			// Get the provider from the registry
+			provider, err := m.Registry.Get("AWS")
 			if err != nil {
 				return err
 			}
 
-			pipelines, err := provider.GetPipelineStatus(context.Background())
+			// Get pipeline status from the provider
+			ctx := context.Background()
+			pipelines, err := provider.GetStatus(ctx)
 			if err != nil {
 				return err
 			}
@@ -54,7 +67,8 @@ func UpdateModelForView(m *model.Model) error {
 	case constants.ViewPipelineStages:
 		if m.SelectedPipeline != nil && len(m.SelectedPipeline.Stages) == 0 {
 			if m.Provider == nil {
-				provider, err := aws.New(context.Background(), m.AwsProfile, m.AwsRegion)
+				// Get the provider from the registry
+				provider, err := m.Registry.Get("AWS")
 				if err != nil {
 					return err
 				}
@@ -83,7 +97,8 @@ func ExecuteAction(m *model.Model) error {
 		}
 
 		if m.Provider == nil {
-			provider, err := aws.New(context.Background(), m.AwsProfile, m.AwsRegion)
+			// Get the provider from the registry
+			provider, err := m.Registry.Get("AWS")
 			if err != nil {
 				return err
 			}
@@ -95,11 +110,9 @@ func ExecuteAction(m *model.Model) error {
 			return fmt.Errorf(constants.MsgErrorEmptyCommitID)
 		}
 
-		if m.ManualCommitID {
-			err = m.Provider.StartPipelineExecution(context.Background(), m.SelectedPipeline.Name, m.CommitID)
-		} else {
-			err = m.Provider.StartPipelineExecution(context.Background(), m.SelectedPipeline.Name, "")
-		}
+		// Start the pipeline execution
+		ctx := context.Background()
+		err = m.Provider.StartPipeline(ctx, m.SelectedPipeline.Name, m.CommitID)
 
 		HandlePipelineExecution(m, err)
 		return nil
@@ -110,7 +123,8 @@ func ExecuteAction(m *model.Model) error {
 	}
 
 	if m.Provider == nil {
-		provider, err := aws.New(context.Background(), m.AwsProfile, m.AwsRegion)
+		// Get the provider from the registry
+		provider, err := m.Registry.Get("AWS")
 		if err != nil {
 			return err
 		}
@@ -118,17 +132,13 @@ func ExecuteAction(m *model.Model) error {
 	}
 
 	var err error
-	if m.ApproveAction {
-		if strings.TrimSpace(m.ApprovalComment) == "" {
-			return fmt.Errorf(constants.MsgErrorEmptyComment)
-		}
-		err = m.Provider.PutApprovalResult(context.Background(), *m.SelectedApproval, true, m.ApprovalComment)
-	} else {
-		if strings.TrimSpace(m.ApprovalComment) == "" {
-			return fmt.Errorf(constants.MsgErrorEmptyComment)
-		}
-		err = m.Provider.PutApprovalResult(context.Background(), *m.SelectedApproval, false, m.ApprovalComment)
+	if strings.TrimSpace(m.ApprovalComment) == "" {
+		return fmt.Errorf(constants.MsgErrorEmptyComment)
 	}
+
+	// Execute the approval action
+	ctx := context.Background()
+	err = m.Provider.ApproveAction(ctx, *m.SelectedApproval, m.ApproveAction, m.ApprovalComment)
 
 	HandleApprovalResult(m, err)
 	return nil

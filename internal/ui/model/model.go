@@ -1,7 +1,8 @@
 package model
 
 import (
-	"github.com/HenryOwenz/cloudgate/internal/aws"
+	"sort"
+
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/styles"
@@ -50,19 +51,19 @@ type Model struct {
 	AwsRegion         string
 	Profiles          []string
 	Regions           []string
-	Provider          *aws.Provider
-	Approvals         []aws.ApprovalAction
-	Pipelines         []aws.PipelineStatus
+	Provider          providers.Provider
+	Approvals         []providers.ApprovalAction
+	Pipelines         []providers.PipelineStatus
 	Services          []Service
 	Categories        []Category
 	Operations        []Operation
 	SelectedService   *Service
 	SelectedCategory  *Category
 	SelectedOperation *Operation
-	SelectedApproval  *aws.ApprovalAction
+	SelectedApproval  *providers.ApprovalAction
 	ApproveAction     bool
 	Summary           string
-	SelectedPipeline  *aws.PipelineStatus
+	SelectedPipeline  *providers.PipelineStatus
 	ManualCommitID    bool
 	CommitID          string
 	ApprovalComment   string
@@ -192,8 +193,8 @@ func New() *Model {
 		// Initialize legacy fields
 		Profiles:   []string{},
 		Regions:    []string{},
-		Approvals:  []aws.ApprovalAction{},
-		Pipelines:  []aws.PipelineStatus{},
+		Approvals:  []providers.ApprovalAction{},
+		Pipelines:  []providers.PipelineStatus{},
 		Services:   []Service{},
 		Categories: []Category{},
 		Operations: []Operation{},
@@ -204,7 +205,23 @@ func New() *Model {
 
 func (m *Model) Init() tea.Cmd {
 	m.Regions = constants.DefaultAWSRegions
-	m.Profiles = aws.GetProfiles()
+
+	// Initialize the AWS provider to get profiles
+	if providers.CreateAWSProvider != nil {
+		awsProvider := providers.CreateAWSProvider()
+		if awsProvider != nil {
+			profiles, err := awsProvider.GetProfiles()
+			if err == nil && len(profiles) > 0 {
+				// Sort the profiles alphabetically
+				sort.Strings(profiles)
+				m.Profiles = profiles
+			} else {
+				// Fallback to default profile if there's an error
+				m.Profiles = []string{"default"}
+			}
+		}
+	}
+
 	return m.Spinner.Tick
 }
 
@@ -423,10 +440,10 @@ func (m *Model) SetManualCommitID(manual bool) {
 }
 
 // GetSelectedApproval returns the selected approval from the provider-specific state
-func (m *Model) GetSelectedApproval() *aws.ApprovalAction {
+func (m *Model) GetSelectedApproval() *providers.ApprovalAction {
 	// First check the new structure
 	if approval, ok := m.ProviderState.ProviderSpecificState["selected-approval"]; ok {
-		if typedApproval, ok := approval.(*aws.ApprovalAction); ok {
+		if typedApproval, ok := approval.(*providers.ApprovalAction); ok {
 			return typedApproval
 		}
 	}
@@ -435,17 +452,17 @@ func (m *Model) GetSelectedApproval() *aws.ApprovalAction {
 }
 
 // SetSelectedApproval sets the selected approval in the provider-specific state
-func (m *Model) SetSelectedApproval(approval *aws.ApprovalAction) {
+func (m *Model) SetSelectedApproval(approval *providers.ApprovalAction) {
 	m.ProviderState.ProviderSpecificState["selected-approval"] = approval
 	// Also set in legacy field for backward compatibility
 	m.SelectedApproval = approval
 }
 
 // GetSelectedPipeline returns the selected pipeline from the provider-specific state
-func (m *Model) GetSelectedPipeline() *aws.PipelineStatus {
+func (m *Model) GetSelectedPipeline() *providers.PipelineStatus {
 	// First check the new structure
 	if pipeline, ok := m.ProviderState.ProviderSpecificState["selected-pipeline"]; ok {
-		if typedPipeline, ok := pipeline.(*aws.PipelineStatus); ok {
+		if typedPipeline, ok := pipeline.(*providers.PipelineStatus); ok {
 			return typedPipeline
 		}
 	}
@@ -454,17 +471,17 @@ func (m *Model) GetSelectedPipeline() *aws.PipelineStatus {
 }
 
 // SetSelectedPipeline sets the selected pipeline in the provider-specific state
-func (m *Model) SetSelectedPipeline(pipeline *aws.PipelineStatus) {
+func (m *Model) SetSelectedPipeline(pipeline *providers.PipelineStatus) {
 	m.ProviderState.ProviderSpecificState["selected-pipeline"] = pipeline
 	// Also set in legacy field for backward compatibility
 	m.SelectedPipeline = pipeline
 }
 
 // GetApprovals returns the approvals from the provider-specific state
-func (m *Model) GetApprovals() []aws.ApprovalAction {
+func (m *Model) GetApprovals() []providers.ApprovalAction {
 	// First check the new structure
 	if approvals, ok := m.ProviderState.ProviderSpecificState["approvals"]; ok {
-		if typedApprovals, ok := approvals.([]aws.ApprovalAction); ok {
+		if typedApprovals, ok := approvals.([]providers.ApprovalAction); ok {
 			return typedApprovals
 		}
 	}
@@ -473,17 +490,17 @@ func (m *Model) GetApprovals() []aws.ApprovalAction {
 }
 
 // SetApprovals sets the approvals in the provider-specific state
-func (m *Model) SetApprovals(approvals []aws.ApprovalAction) {
+func (m *Model) SetApprovals(approvals []providers.ApprovalAction) {
 	m.ProviderState.ProviderSpecificState["approvals"] = approvals
 	// Also set in legacy field for backward compatibility
 	m.Approvals = approvals
 }
 
 // GetPipelines returns the pipelines from the provider-specific state
-func (m *Model) GetPipelines() []aws.PipelineStatus {
+func (m *Model) GetPipelines() []providers.PipelineStatus {
 	// First check the new structure
 	if pipelines, ok := m.ProviderState.ProviderSpecificState["pipelines"]; ok {
-		if typedPipelines, ok := pipelines.([]aws.PipelineStatus); ok {
+		if typedPipelines, ok := pipelines.([]providers.PipelineStatus); ok {
 			return typedPipelines
 		}
 	}
@@ -492,7 +509,7 @@ func (m *Model) GetPipelines() []aws.PipelineStatus {
 }
 
 // SetPipelines sets the pipelines in the provider-specific state
-func (m *Model) SetPipelines(pipelines []aws.PipelineStatus) {
+func (m *Model) SetPipelines(pipelines []providers.PipelineStatus) {
 	m.ProviderState.ProviderSpecificState["pipelines"] = pipelines
 	// Also set in legacy field for backward compatibility
 	m.Pipelines = pipelines

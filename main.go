@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	// Import the AWS provider package to ensure its init() function is called
+	_ "github.com/HenryOwenz/cloudgate/internal/providers/aws"
+
 	"github.com/HenryOwenz/cloudgate/internal/ui"
 	tea "github.com/charmbracelet/bubbletea"
 )

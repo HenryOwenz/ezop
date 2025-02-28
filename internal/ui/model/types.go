@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/HenryOwenz/cloudgate/internal/aws"
+	"github.com/HenryOwenz/cloudgate/internal/providers"
 )
 
 // Service represents a cloud service
@@ -32,10 +32,19 @@ type ErrMsg struct {
 	Err error
 }
 
+// ApprovalAction is an alias for providers.ApprovalAction
+type ApprovalAction = providers.ApprovalAction
+
+// StageStatus is an alias for providers.StageStatus
+type StageStatus = providers.StageStatus
+
+// PipelineStatus is an alias for providers.PipelineStatus
+type PipelineStatus = providers.PipelineStatus
+
 // ApprovalsMsg represents a message containing approvals
 type ApprovalsMsg struct {
-	Approvals []aws.ApprovalAction
-	Provider  *aws.Provider
+	Approvals []ApprovalAction
+	Provider  providers.Provider
 }
 
 // ApprovalResultMsg represents the result of an approval action
@@ -45,8 +54,8 @@ type ApprovalResultMsg struct {
 
 // PipelineStatusMsg represents a message containing pipeline status
 type PipelineStatusMsg struct {
-	Pipelines []aws.PipelineStatus
-	Provider  *aws.Provider
+	Pipelines []PipelineStatus
+	Provider  providers.Provider
 }
 
 // PipelineExecutionMsg represents the result of a pipeline execution

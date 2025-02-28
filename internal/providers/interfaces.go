@@ -6,6 +6,27 @@ import (
 	"sync"
 )
 
+// ApprovalAction represents a pending approval in a pipeline
+type ApprovalAction struct {
+	PipelineName string
+	StageName    string
+	ActionName   string
+	Token        string
+}
+
+// StageStatus represents the status of a pipeline stage
+type StageStatus struct {
+	Name        string
+	Status      string
+	LastUpdated string
+}
+
+// PipelineStatus represents the status of a pipeline and its stages
+type PipelineStatus struct {
+	Name   string
+	Stages []StageStatus
+}
+
 // Provider interface defines methods that all cloud providers must implement
 type Provider interface {
 	// Name returns the provider's name
@@ -43,6 +64,18 @@ type Provider interface {
 
 	// Configure configures the provider with the given configuration
 	Configure(config map[string]string) error
+
+	// GetApprovals returns all pending approvals for the provider
+	GetApprovals(ctx context.Context) ([]ApprovalAction, error)
+
+	// ApproveAction approves or rejects an approval action
+	ApproveAction(ctx context.Context, action ApprovalAction, approved bool, comment string) error
+
+	// GetStatus returns the status of all pipelines
+	GetStatus(ctx context.Context) ([]PipelineStatus, error)
+
+	// StartPipeline starts a pipeline execution
+	StartPipeline(ctx context.Context, pipelineName string, commitID string) error
 }
 
 // Service interface defines methods that all cloud services must implement

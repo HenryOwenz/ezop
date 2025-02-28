@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/HenryOwenz/cloudgate/internal/cloud/aws"
@@ -113,4 +114,86 @@ func (p *Provider) Configure(config map[string]string) error {
 	}
 
 	return p.LoadConfig(profile, region)
+}
+
+// GetApprovals returns all pending approvals for the provider
+func (p *Provider) GetApprovals(ctx context.Context) ([]providers.ApprovalAction, error) {
+	if !p.IsAuthenticated() {
+		return nil, fmt.Errorf("provider not authenticated")
+	}
+
+	approvals, err := p.GetPendingApprovals(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert internal ApprovalAction to providers.ApprovalAction
+	providerApprovals := make([]providers.ApprovalAction, len(approvals))
+	for i, approval := range approvals {
+		providerApprovals[i] = providers.ApprovalAction{
+			PipelineName: approval.PipelineName,
+			StageName:    approval.StageName,
+			ActionName:   approval.ActionName,
+			Token:        approval.Token,
+		}
+	}
+
+	return providerApprovals, nil
+}
+
+// ApproveAction approves or rejects an approval action
+func (p *Provider) ApproveAction(ctx context.Context, action providers.ApprovalAction, approved bool, comment string) error {
+	if !p.IsAuthenticated() {
+		return fmt.Errorf("provider not authenticated")
+	}
+
+	// Convert providers.ApprovalAction to internal ApprovalAction
+	internalAction := ApprovalAction{
+		PipelineName: action.PipelineName,
+		StageName:    action.StageName,
+		ActionName:   action.ActionName,
+		Token:        action.Token,
+	}
+
+	return p.PutApprovalResult(ctx, internalAction, approved, comment)
+}
+
+// GetStatus returns the status of all pipelines
+func (p *Provider) GetStatus(ctx context.Context) ([]providers.PipelineStatus, error) {
+	if !p.IsAuthenticated() {
+		return nil, fmt.Errorf("provider not authenticated")
+	}
+
+	statuses, err := p.GetPipelineStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert internal PipelineStatus to providers.PipelineStatus
+	providerStatuses := make([]providers.PipelineStatus, len(statuses))
+	for i, status := range statuses {
+		providerStages := make([]providers.StageStatus, len(status.Stages))
+		for j, stage := range status.Stages {
+			providerStages[j] = providers.StageStatus{
+				Name:        stage.Name,
+				Status:      stage.Status,
+				LastUpdated: stage.LastUpdated,
+			}
+		}
+		providerStatuses[i] = providers.PipelineStatus{
+			Name:   status.Name,
+			Stages: providerStages,
+		}
+	}
+
+	return providerStatuses, nil
+}
+
+// StartPipeline starts a pipeline execution
+func (p *Provider) StartPipeline(ctx context.Context, pipelineName string, commitID string) error {
+	if !p.IsAuthenticated() {
+		return fmt.Errorf("provider not authenticated")
+	}
+
+	return p.StartPipelineExecution(ctx, pipelineName, commitID)
 }
