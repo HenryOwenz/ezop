@@ -70,6 +70,15 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 			newModel.AwsRegion = value
 			newModel.ManualInput = false
 			newModel.ResetTextInput()
+
+			// Create the provider with the selected profile and region
+			_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.AwsProfile, newModel.AwsRegion)
+			if err != nil {
+				return WrapModel(newModel), func() tea.Msg {
+					return core.ErrMsg{Err: err}
+				}
+			}
+
 			newModel.CurrentView = constants.ViewSelectService
 			view.UpdateTableForView(newModel)
 		}
