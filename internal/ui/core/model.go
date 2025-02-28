@@ -70,7 +70,7 @@ func New() *Model {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#DD6B20", Dark: "#ED8936"}).Italic(true)
 
 	ti := textinput.New()
-	ti.Placeholder = "Enter comment..."
+	ti.Placeholder = constants.MsgEnterComment
 	ti.CharLimit = 100
 	ti.Width = 50
 
@@ -127,8 +127,8 @@ func (m *Model) ResetTextInput() {
 func (m *Model) SetTextInputForApproval(isApproval bool) {
 	m.TextInput.Focus()
 	if isApproval {
-		m.TextInput.Placeholder = "Enter approval comment..."
+		m.TextInput.Placeholder = constants.MsgEnterApprovalComment
 	} else {
-		m.TextInput.Placeholder = "Enter rejection comment..."
+		m.TextInput.Placeholder = constants.MsgEnterRejectionComment
 	}
 }

@@ -1,6 +1,7 @@
 package styles
 
 import (
+	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -19,14 +20,14 @@ type Styles struct {
 func DefaultStyles() Styles {
 	s := Styles{}
 
-	// Define a green-based professional scheme with orange highlight
-	primary := lipgloss.AdaptiveColor{Light: "#276749", Dark: "#48BB78"}      // Forest green
-	secondary := lipgloss.AdaptiveColor{Light: "#1C4532", Dark: "#68D391"}    // Deep/Light green
-	subtle := lipgloss.AdaptiveColor{Light: "#718096", Dark: "#CBD5E0"}       // Keep gray for subtle elements
-	highlight := lipgloss.AdaptiveColor{Light: "#DD6B20", Dark: "#ED8936"}    // Professional orange
-	special := lipgloss.AdaptiveColor{Light: "#2F855A", Dark: "#68D391"}      // Medium green
-	contextColor := lipgloss.AdaptiveColor{Light: "#4A5568", Dark: "#A0AEC0"} // Keep gray for context
-	darkGray := lipgloss.AdaptiveColor{Light: "#1A202C", Dark: "#2D3748"}     // Dark gray for selected text
+	// Use color constants for consistent styling
+	subtle := lipgloss.Color(constants.ColorSubtle)
+	highlight := lipgloss.Color(constants.ColorPrimary)
+	special := lipgloss.Color(constants.ColorSuccess)
+	contextColor := lipgloss.Color(constants.ColorSubtle)
+	darkGray := lipgloss.Color(constants.ColorBgAlt)
+	titleColor := lipgloss.Color(constants.ColorTitle)
+	headerColor := lipgloss.Color(constants.ColorHeader)
 
 	s.App = lipgloss.NewStyle().
 		Padding(1, 2).
@@ -35,7 +36,7 @@ func DefaultStyles() Styles {
 
 	s.Title = lipgloss.NewStyle().
 		Bold(true).
-		Foreground(primary).
+		Foreground(titleColor).
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderBottom(true).
 		BorderForeground(subtle).
@@ -53,11 +54,11 @@ func DefaultStyles() Styles {
 		Height(5) // Increased from 3 to 5 lines for context
 
 	s.Error = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#E53E3E")).
+		Foreground(lipgloss.Color(constants.ColorError)).
 		Bold(true).
 		Padding(0, 1).
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("#E53E3E"))
+		BorderForeground(lipgloss.Color(constants.ColorError))
 
 	// Table styles with fixed height
 	ts := table.DefaultStyles()
@@ -67,7 +68,7 @@ func DefaultStyles() Styles {
 		BorderBottom(true).
 		Bold(true).
 		Padding(0, 1).
-		Foreground(secondary).
+		Foreground(headerColor).
 		Align(lipgloss.Center)
 
 	ts.Selected = ts.Selected.

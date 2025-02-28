@@ -105,7 +105,7 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 					case "Manual Input":
 						newModel.ManualInput = true
 						newModel.TextInput.Focus()
-						newModel.TextInput.Placeholder = "Enter commit ID..."
+						newModel.TextInput.Placeholder = constants.MsgEnterCommitID
 						return WrapModel(&newModel), nil
 					}
 				}
@@ -163,9 +163,9 @@ func HandleAWSConfigSelection(m *core.Model) (tea.Model, tea.Cmd) {
 
 			// Set appropriate placeholder based on context
 			if m.AwsProfile == "" {
-				newModel.TextInput.Placeholder = "Enter AWS profile name..."
+				newModel.TextInput.Placeholder = constants.MsgEnterProfile
 			} else {
-				newModel.TextInput.Placeholder = "Enter AWS region..."
+				newModel.TextInput.Placeholder = constants.MsgEnterRegion
 			}
 
 			return WrapModel(&newModel), nil
@@ -227,12 +227,12 @@ func HandleOperationSelection(m *core.Model) (tea.Model, tea.Cmd) {
 		if selected[0] == "Pipeline Approvals" {
 			// Start loading approvals
 			newModel.IsLoading = true
-			newModel.LoadingMsg = "Loading approvals..."
+			newModel.LoadingMsg = constants.MsgLoadingApprovals
 			return WrapModel(&newModel), FetchApprovals(m)
 		} else if selected[0] == "Pipeline Status" || selected[0] == "Start Pipeline" {
 			// Start loading pipeline status
 			newModel.IsLoading = true
-			newModel.LoadingMsg = "Loading pipelines..."
+			newModel.LoadingMsg = constants.MsgLoadingPipelines
 			return WrapModel(&newModel), FetchPipelineStatus(m)
 		}
 	}
@@ -328,10 +328,10 @@ func HandleExecutionSelection(m *core.Model) (tea.Model, tea.Cmd) {
 			newModel := *m
 			newModel.IsLoading = true
 			if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
-				newModel.LoadingMsg = "Starting pipeline..."
+				newModel.LoadingMsg = constants.MsgStartingPipeline
 				return WrapModel(&newModel), ExecutePipeline(m)
 			} else if m.SelectedApproval != nil {
-				newModel.LoadingMsg = "Executing approval action..."
+				newModel.LoadingMsg = constants.MsgExecutingApproval
 				return WrapModel(&newModel), ExecuteApproval(m)
 			}
 		} else if selected[0] == "Cancel" {

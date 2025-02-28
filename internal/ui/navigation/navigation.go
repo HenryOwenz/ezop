@@ -52,9 +52,9 @@ func NavigateBack(m *core.Model) *core.Model {
 			newModel.TextInput.SetValue(m.Summary)
 			newModel.TextInput.Focus()
 			if newModel.ApproveAction {
-				newModel.TextInput.Placeholder = "Enter approval comment..."
+				newModel.TextInput.Placeholder = constants.MsgEnterApprovalComment
 			} else {
-				newModel.TextInput.Placeholder = "Enter rejection comment..."
+				newModel.TextInput.Placeholder = constants.MsgEnterRejectionComment
 			}
 		}
 	case constants.ViewPipelineStages:

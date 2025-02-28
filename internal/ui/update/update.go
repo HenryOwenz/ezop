@@ -14,21 +14,23 @@ import (
 // HandleApprovalResult handles the result of an approval action
 func HandleApprovalResult(m *core.Model, err error) {
 	if err != nil {
-		m.Error = fmt.Sprintf("Error: %s", err.Error())
+		m.Error = fmt.Sprintf(constants.MsgErrorGeneric, err.Error())
 		m.CurrentView = constants.ViewError
 		return
 	}
 
-	action := "approved"
-	if !m.ApproveAction {
-		action = "rejected"
+	// Use the appropriate message constant based on approval action
+	if m.ApproveAction {
+		m.Success = fmt.Sprintf(constants.MsgApprovalSuccess,
+			m.SelectedApproval.PipelineName,
+			m.SelectedApproval.StageName,
+			m.SelectedApproval.ActionName)
+	} else {
+		m.Success = fmt.Sprintf(constants.MsgRejectionSuccess,
+			m.SelectedApproval.PipelineName,
+			m.SelectedApproval.StageName,
+			m.SelectedApproval.ActionName)
 	}
-
-	m.Success = fmt.Sprintf("Successfully %s pipeline: %s, stage: %s, action: %s",
-		action,
-		m.SelectedApproval.PipelineName,
-		m.SelectedApproval.StageName,
-		m.SelectedApproval.ActionName)
 
 	// Reset approval state
 	m.SelectedApproval = nil
@@ -36,7 +38,7 @@ func HandleApprovalResult(m *core.Model, err error) {
 
 	// Completely reset the text input
 	m.ResetTextInput()
-	m.TextInput.Placeholder = "Enter comment..."
+	m.TextInput.Placeholder = constants.MsgEnterComment
 	m.ManualInput = false
 
 	// Navigate back to the operation selection view
@@ -52,12 +54,12 @@ func HandleApprovalResult(m *core.Model, err error) {
 // HandlePipelineExecution handles the result of a pipeline execution
 func HandlePipelineExecution(m *core.Model, err error) {
 	if err != nil {
-		m.Error = fmt.Sprintf("Error: %s", err.Error())
+		m.Error = fmt.Sprintf(constants.MsgErrorGeneric, err.Error())
 		m.CurrentView = constants.ViewError
 		return
 	}
 
-	m.Success = fmt.Sprintf("Successfully started pipeline: %s", m.SelectedPipeline.Name)
+	m.Success = fmt.Sprintf(constants.MsgPipelineStartSuccess, m.SelectedPipeline.Name)
 
 	// Reset pipeline state
 	m.SelectedPipeline = nil
@@ -66,7 +68,7 @@ func HandlePipelineExecution(m *core.Model, err error) {
 
 	// Completely reset the text input
 	m.ResetTextInput()
-	m.TextInput.Placeholder = "Enter comment..."
+	m.TextInput.Placeholder = constants.MsgEnterComment
 	m.ManualInput = false
 
 	// Navigate back to the operation selection view
@@ -151,7 +153,7 @@ func UpdateModelForView(m *core.Model) error {
 func ExecuteAction(m *core.Model) error {
 	if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
 		if m.SelectedPipeline == nil {
-			return fmt.Errorf("no pipeline selected")
+			return fmt.Errorf(constants.MsgErrorNoPipeline)
 		}
 
 		if m.Provider == nil {
@@ -164,7 +166,7 @@ func ExecuteAction(m *core.Model) error {
 
 		var err error
 		if m.ManualCommitID && strings.TrimSpace(m.CommitID) == "" {
-			return fmt.Errorf("commit ID cannot be empty")
+			return fmt.Errorf(constants.MsgErrorEmptyCommitID)
 		}
 
 		if m.ManualCommitID {
@@ -178,7 +180,7 @@ func ExecuteAction(m *core.Model) error {
 	}
 
 	if m.SelectedApproval == nil {
-		return fmt.Errorf("no approval selected")
+		return fmt.Errorf(constants.MsgErrorNoApproval)
 	}
 
 	if m.Provider == nil {
@@ -192,12 +194,12 @@ func ExecuteAction(m *core.Model) error {
 	var err error
 	if m.ApproveAction {
 		if strings.TrimSpace(m.ApprovalComment) == "" {
-			return fmt.Errorf("approval comment cannot be empty")
+			return fmt.Errorf(constants.MsgErrorEmptyComment)
 		}
 		err = m.Provider.PutApprovalResult(context.Background(), *m.SelectedApproval, true, m.ApprovalComment)
 	} else {
 		if strings.TrimSpace(m.ApprovalComment) == "" {
-			return fmt.Errorf("rejection comment cannot be empty")
+			return fmt.Errorf(constants.MsgErrorEmptyComment)
 		}
 		err = m.Provider.PutApprovalResult(context.Background(), *m.SelectedApproval, false, m.ApprovalComment)
 	}

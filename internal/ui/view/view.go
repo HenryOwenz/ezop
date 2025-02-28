@@ -63,7 +63,7 @@ func Render(m *core.Model) string {
 func getContextText(m *core.Model) string {
 	switch m.CurrentView {
 	case constants.ViewProviders:
-		return "A simple tool to manage your cloud resources"
+		return constants.MsgAppDescription
 	case constants.ViewAWSConfig:
 		if m.AwsProfile == "" {
 			// If in manual entry mode for profile, show the text input in the context
@@ -154,30 +154,36 @@ func getContextText(m *core.Model) string {
 func getTitleText(m *core.Model) string {
 	switch m.CurrentView {
 	case constants.ViewProviders:
-		return "Select Cloud Provider"
+		return constants.TitleProviders
 	case constants.ViewAWSConfig:
 		if m.AwsProfile == "" {
-			return "Select AWS Profile"
+			return constants.TitleSelectProfile
 		}
-		return "Select AWS Region"
+		return constants.TitleSelectRegion
 	case constants.ViewSelectService:
-		return "Select AWS Service"
+		return constants.TitleSelectService
 	case constants.ViewSelectCategory:
-		return "Select Category"
+		return constants.TitleSelectCategory
 	case constants.ViewSelectOperation:
-		return "Select Operation"
+		return constants.TitleSelectOperation
 	case constants.ViewApprovals:
-		return "Pipeline Approvals"
+		return constants.TitleApprovals
 	case constants.ViewConfirmation:
-		return "Execute Action"
+		return constants.TitleConfirmation
 	case constants.ViewSummary:
-		return "Enter Comment"
+		return constants.TitleSummary
 	case constants.ViewExecutingAction:
-		return "Execute Action"
+		return constants.TitleExecutingAction
 	case constants.ViewPipelineStatus:
-		return "Select Pipeline"
+		return constants.TitlePipelineStatus
 	case constants.ViewPipelineStages:
-		return "Pipeline Stages"
+		return constants.TitlePipelineStages
+	case constants.ViewError:
+		return constants.TitleError
+	case constants.ViewSuccess:
+		return constants.TitleSuccess
+	case constants.ViewHelp:
+		return constants.TitleHelp
 	default:
 		return ""
 	}
