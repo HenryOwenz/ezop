@@ -30,9 +30,9 @@ func DefaultStyles() Styles {
 	headerColor := lipgloss.Color(constants.ColorHeader)
 
 	s.App = lipgloss.NewStyle().
-		Padding(1, 2).
-		MaxWidth(100).
-		Height(17) // Increased to accommodate more context
+		Padding(constants.PaddingX, constants.PaddingY).
+		MaxWidth(constants.AppMaxWidth).
+		Height(constants.AppHeight) // Increased to accommodate more context
 
 	s.Title = lipgloss.NewStyle().
 		Bold(true).

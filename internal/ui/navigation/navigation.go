@@ -7,7 +7,7 @@ import (
 
 // NavigateBack handles navigation to the previous view
 func NavigateBack(m *core.Model) *core.Model {
-	newModel := *m
+	newModel := m.Clone()
 	switch m.CurrentView {
 	case constants.ViewAWSConfig:
 		if m.AwsProfile != "" {
@@ -65,5 +65,5 @@ func NavigateBack(m *core.Model) *core.Model {
 		newModel.Pipelines = nil
 		newModel.Provider = nil
 	}
-	return &newModel
+	return newModel
 }

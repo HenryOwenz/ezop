@@ -21,13 +21,12 @@ func Render(m *core.Model) string {
 		)
 	}
 
-	content := []string{
-		m.Styles.Title.Render(getTitleText(m)),
-		m.Styles.Context.Render(getContextText(m)),
-		"",
-		"",
-		"", // Empty line for help text
-	}
+	// Create content array with appropriate spacing
+	content := make([]string, constants.AppContentLines)
+
+	// Set the title and context
+	content[0] = m.Styles.Title.Render(getTitleText(m))
+	content[1] = m.Styles.Context.Render(getContextText(m))
 
 	// Add loading spinner if needed
 	if m.IsLoading {
@@ -40,7 +39,7 @@ func Render(m *core.Model) string {
 	} else {
 		// For other views, follow normal logic
 		if !m.ManualInput {
-			content[3] = m.Table.View()
+			content[3] = renderTable(m)
 		}
 		if m.ManualInput {
 			content[3] = m.TextInput.View()
@@ -205,4 +204,24 @@ func getHelpText(m *core.Model) string {
 	default:
 		return fmt.Sprintf("↑/↓: navigate • %s: select • %s: back • %s: quit", constants.KeyEnter, constants.KeyEsc, constants.KeyQ)
 	}
+}
+
+// renderTable renders the table for the current view
+func renderTable(m *core.Model) string {
+	if m.Table.Rows() == nil {
+		return ""
+	}
+
+	// Create a table style with appropriate height based on the current view
+	tableStyle := lipgloss.NewStyle().Padding(1, 2)
+
+	// Use larger height for views that need more space
+	if m.CurrentView == constants.ViewPipelineStages {
+		tableStyle = tableStyle.Height(constants.TableHeightLarge)
+	} else {
+		tableStyle = tableStyle.Height(constants.TableHeight)
+	}
+
+	// Render the table with the appropriate styles
+	return tableStyle.Render(m.Table.View())
 }

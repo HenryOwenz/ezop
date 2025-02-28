@@ -13,11 +13,17 @@ func UpdateTableForView(m *core.Model) {
 	columns := getColumnsForView(m)
 	rows := getRowsForView(m)
 
+	// Set the table height based on the current view
+	tableHeight := constants.TableHeight
+	if m.CurrentView == constants.ViewPipelineStages {
+		tableHeight = constants.TableHeightLarge
+	}
+
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(6),
+		table.WithHeight(tableHeight),
 	)
 
 	t.SetStyles(m.Styles.Table)
@@ -29,60 +35,60 @@ func getColumnsForView(m *core.Model) []table.Column {
 	switch m.CurrentView {
 	case constants.ViewProviders:
 		return []table.Column{
-			{Title: "Provider", Width: 30},
-			{Title: "Description", Width: 50},
+			{Title: "Provider", Width: constants.TableDefaultWidth},
+			{Title: "Description", Width: constants.TableDescWidth},
 		}
 	case constants.ViewAWSConfig:
 		if m.AwsProfile == "" {
-			return []table.Column{{Title: "Profile", Width: 30}}
+			return []table.Column{{Title: "Profile", Width: constants.TableDefaultWidth}}
 		}
-		return []table.Column{{Title: "Region", Width: 30}}
+		return []table.Column{{Title: "Region", Width: constants.TableDefaultWidth}}
 	case constants.ViewSelectService:
 		return []table.Column{
-			{Title: "Service", Width: 30},
-			{Title: "Description", Width: 50},
+			{Title: "Service", Width: constants.TableDefaultWidth},
+			{Title: "Description", Width: constants.TableDescWidth},
 		}
 	case constants.ViewSelectCategory:
 		return []table.Column{
-			{Title: "Category", Width: 30},
-			{Title: "Description", Width: 50},
+			{Title: "Category", Width: constants.TableDefaultWidth},
+			{Title: "Description", Width: constants.TableDescWidth},
 		}
 	case constants.ViewSelectOperation:
 		return []table.Column{
-			{Title: "Operation", Width: 30},
-			{Title: "Description", Width: 50},
+			{Title: "Operation", Width: constants.TableDefaultWidth},
+			{Title: "Description", Width: constants.TableDescWidth},
 		}
 	case constants.ViewApprovals:
 		return []table.Column{
-			{Title: "Pipeline", Width: 40},
-			{Title: "Stage", Width: 30},
-			{Title: "Action", Width: 20},
+			{Title: "Pipeline", Width: constants.TableWideWidth},
+			{Title: "Stage", Width: constants.TableDefaultWidth},
+			{Title: "Action", Width: constants.TableNarrowWidth},
 		}
 	case constants.ViewConfirmation:
 		return []table.Column{
-			{Title: "Action", Width: 30},
-			{Title: "Description", Width: 50},
+			{Title: "Action", Width: constants.TableDefaultWidth},
+			{Title: "Description", Width: constants.TableDescWidth},
 		}
 	case constants.ViewExecutingAction:
 		return []table.Column{
-			{Title: "Action", Width: 30},
-			{Title: "Description", Width: 50},
+			{Title: "Action", Width: constants.TableDefaultWidth},
+			{Title: "Description", Width: constants.TableDescWidth},
 		}
 	case constants.ViewPipelineStatus:
 		return []table.Column{
-			{Title: "Pipeline", Width: 40},
-			{Title: "Description", Width: 50},
+			{Title: "Pipeline", Width: constants.TableWideWidth},
+			{Title: "Description", Width: constants.TableDescWidth},
 		}
 	case constants.ViewPipelineStages:
 		return []table.Column{
-			{Title: "Stage", Width: 30},
-			{Title: "Status", Width: 20},
-			{Title: "Last Updated", Width: 20},
+			{Title: "Stage", Width: constants.TableDefaultWidth},
+			{Title: "Status", Width: constants.TableNarrowWidth},
+			{Title: "Last Updated", Width: constants.TableNarrowWidth},
 		}
 	case constants.ViewSummary:
 		return []table.Column{
-			{Title: "Type", Width: 30},
-			{Title: "Value", Width: 50},
+			{Title: "Type", Width: constants.TableDefaultWidth},
+			{Title: "Value", Width: constants.TableDescWidth},
 		}
 	default:
 		return []table.Column{}

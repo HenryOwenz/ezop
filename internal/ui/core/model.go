@@ -67,15 +67,15 @@ type Model struct {
 func New() *Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#DD6B20", Dark: "#ED8936"}).Italic(true)
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color(constants.ColorWarning)).Italic(true)
 
 	ti := textinput.New()
 	ti.Placeholder = constants.MsgEnterComment
-	ti.CharLimit = 100
-	ti.Width = 50
+	ti.CharLimit = constants.TextInputCharLimit
+	ti.Width = constants.TextInputWidth
 
 	t := table.New(
-		table.WithHeight(6),
+		table.WithHeight(constants.TableHeight),
 		table.WithFocused(true),
 	)
 	t.SetStyles(styles.DefaultStyles().Table)
@@ -100,11 +100,7 @@ func New() *Model {
 }
 
 func (m *Model) Init() tea.Cmd {
-	m.Regions = []string{
-		"us-east-1", "us-east-2", "us-west-1", "us-west-2",
-		"eu-west-1", "eu-west-2", "eu-central-1",
-		"ap-southeast-1", "ap-southeast-2", "ap-northeast-1",
-	}
+	m.Regions = constants.DefaultAWSRegions
 	m.Profiles = aws.GetProfiles()
 	return m.Spinner.Tick
 }
@@ -131,4 +127,10 @@ func (m *Model) SetTextInputForApproval(isApproval bool) {
 	} else {
 		m.TextInput.Placeholder = constants.MsgEnterRejectionComment
 	}
+}
+
+// Clone creates a deep copy of the model
+func (m *Model) Clone() *Model {
+	newModel := *m
+	return &newModel
 }

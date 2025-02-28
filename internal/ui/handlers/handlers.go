@@ -44,7 +44,7 @@ func WrapModel(m *core.Model) ModelWrapper {
 func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 	// Special handling for manual input in AWS config view
 	if m.CurrentView == constants.ViewAWSConfig && m.ManualInput {
-		newModel := *m
+		newModel := m.Clone()
 
 		// Get the entered value
 		value := strings.TrimSpace(m.TextInput.Value())
@@ -52,8 +52,8 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 			// If empty, just exit manual input mode
 			newModel.ManualInput = false
 			newModel.ResetTextInput()
-			view.UpdateTableForView(&newModel)
-			return WrapModel(&newModel), nil
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
 		}
 
 		// Set the appropriate value based on context
@@ -62,17 +62,17 @@ func HandleEnter(m *core.Model) (tea.Model, tea.Cmd) {
 			newModel.AwsProfile = value
 			newModel.ManualInput = false
 			newModel.ResetTextInput()
-			view.UpdateTableForView(&newModel)
+			view.UpdateTableForView(newModel)
 		} else {
 			// Setting region and moving to next view
 			newModel.AwsRegion = value
 			newModel.ManualInput = false
 			newModel.ResetTextInput()
 			newModel.CurrentView = constants.ViewSelectService
-			view.UpdateTableForView(&newModel)
+			view.UpdateTableForView(newModel)
 		}
 
-		return WrapModel(&newModel), nil
+		return WrapModel(newModel), nil
 	}
 
 	// Regular view handling

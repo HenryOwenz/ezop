@@ -89,11 +89,7 @@ func UpdateModelForView(m *core.Model) error {
 			profiles := aws.GetProfiles()
 			m.Profiles = profiles
 		} else {
-			m.Regions = []string{
-				"us-east-1", "us-east-2", "us-west-1", "us-west-2",
-				"eu-west-1", "eu-west-2", "eu-central-1",
-				"ap-southeast-1", "ap-southeast-2", "ap-northeast-1",
-			}
+			m.Regions = constants.DefaultAWSRegions
 		}
 	case constants.ViewApprovals:
 		if len(m.Approvals) == 0 {
