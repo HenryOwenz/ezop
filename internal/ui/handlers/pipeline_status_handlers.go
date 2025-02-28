@@ -10,8 +10,40 @@ import (
 
 	"github.com/HenryOwenz/cloudgate/internal/aws"
 	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 )
+
+// HandlePipelineExecution handles the result of a pipeline execution
+func HandlePipelineExecution(m *core.Model, err error) {
+	if err != nil {
+		m.Error = fmt.Sprintf(constants.MsgErrorGeneric, err.Error())
+		m.CurrentView = constants.ViewError
+		return
+	}
+
+	m.Success = fmt.Sprintf(constants.MsgPipelineStartSuccess, m.SelectedPipeline.Name)
+
+	// Reset pipeline state
+	m.SelectedPipeline = nil
+	m.CommitID = ""
+	m.ManualCommitID = false
+
+	// Completely reset the text input
+	m.ResetTextInput()
+	m.TextInput.Placeholder = constants.MsgEnterComment
+	m.ManualInput = false
+
+	// Navigate back to the operation selection view
+	m.CurrentView = constants.ViewSelectOperation
+
+	// Clear the pipelines list to force a refresh next time
+	m.Pipelines = nil
+
+	// Update the table for the current view
+	view.UpdateTableForView(m)
+}
 
 // FetchPipelineStatus fetches pipeline status from AWS
 func FetchPipelineStatus(m *core.Model) tea.Cmd {

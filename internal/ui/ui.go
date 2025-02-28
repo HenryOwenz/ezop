@@ -4,8 +4,6 @@ import (
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/core"
 	"github.com/HenryOwenz/cloudgate/internal/ui/handlers"
-	"github.com/HenryOwenz/cloudgate/internal/ui/navigation"
-	"github.com/HenryOwenz/cloudgate/internal/ui/update"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -60,13 +58,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case core.ApprovalResultMsg:
 		newModel := m.Clone()
 		newModel.core.IsLoading = false // Ensure loading is turned off
-		update.HandleApprovalResult(newModel.core, msg.Err)
+		handlers.HandleApprovalResult(newModel.core, msg.Err)
 		view.UpdateTableForView(newModel.core)
 		return newModel, nil
 	case core.PipelineExecutionMsg:
 		newModel := m.Clone()
 		newModel.core.IsLoading = false // Ensure loading is turned off
-		update.HandlePipelineExecution(newModel.core, msg.Err)
+		handlers.HandlePipelineExecution(newModel.core, msg.Err)
 		view.UpdateTableForView(newModel.core)
 		return newModel, nil
 	case spinner.TickMsg:
@@ -123,7 +121,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				view.UpdateTableForView(newModel.core)
 				return newModel, nil
 			}
-			newCore := navigation.NavigateBack(m.core)
+			newCore := handlers.NavigateBack(m.core)
 			view.UpdateTableForView(newCore)
 			return Model{core: newCore}, nil
 		case constants.KeyUp, constants.KeyAltUp:

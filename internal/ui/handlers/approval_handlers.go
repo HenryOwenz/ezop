@@ -10,8 +10,50 @@ import (
 
 	"github.com/HenryOwenz/cloudgate/internal/aws"
 	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/core"
+	"github.com/HenryOwenz/cloudgate/internal/ui/view"
 )
+
+// HandleApprovalResult handles the result of an approval action
+func HandleApprovalResult(m *core.Model, err error) {
+	if err != nil {
+		m.Error = fmt.Sprintf(constants.MsgErrorGeneric, err.Error())
+		m.CurrentView = constants.ViewError
+		return
+	}
+
+	// Use the appropriate message constant based on approval action
+	if m.ApproveAction {
+		m.Success = fmt.Sprintf(constants.MsgApprovalSuccess,
+			m.SelectedApproval.PipelineName,
+			m.SelectedApproval.StageName,
+			m.SelectedApproval.ActionName)
+	} else {
+		m.Success = fmt.Sprintf(constants.MsgRejectionSuccess,
+			m.SelectedApproval.PipelineName,
+			m.SelectedApproval.StageName,
+			m.SelectedApproval.ActionName)
+	}
+
+	// Reset approval state
+	m.SelectedApproval = nil
+	m.ApprovalComment = ""
+
+	// Completely reset the text input
+	m.ResetTextInput()
+	m.TextInput.Placeholder = constants.MsgEnterComment
+	m.ManualInput = false
+
+	// Navigate back to the operation selection view
+	m.CurrentView = constants.ViewSelectOperation
+
+	// Clear the approvals list to force a refresh next time
+	m.Approvals = nil
+
+	// Update the table for the current view
+	view.UpdateTableForView(m)
+}
 
 // FetchApprovals fetches pipeline approvals from AWS
 func FetchApprovals(m *core.Model) tea.Cmd {
