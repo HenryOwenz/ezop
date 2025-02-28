@@ -36,9 +36,15 @@ func UpdateModelForView(m *model.Model) error {
 				return err
 			}
 
-			// Get approvals from the provider
+			// Get the CodePipelineManualApprovalOperation from the provider
+			approvalOperation, err := provider.GetCodePipelineManualApprovalOperation()
+			if err != nil {
+				return err
+			}
+
+			// Get approvals using the operation
 			ctx := context.Background()
-			approvals, err := provider.GetApprovals(ctx)
+			approvals, err := approvalOperation.GetPendingApprovals(ctx)
 			if err != nil {
 				return err
 			}
@@ -54,9 +60,15 @@ func UpdateModelForView(m *model.Model) error {
 				return err
 			}
 
-			// Get pipeline status from the provider
+			// Get the PipelineStatusOperation from the provider
+			statusOperation, err := provider.GetPipelineStatusOperation()
+			if err != nil {
+				return err
+			}
+
+			// Get pipeline status using the operation
 			ctx := context.Background()
-			pipelines, err := provider.GetStatus(ctx)
+			pipelines, err := statusOperation.GetPipelineStatus(ctx)
 			if err != nil {
 				return err
 			}
@@ -105,14 +117,19 @@ func ExecuteAction(m *model.Model) error {
 			m.Provider = provider
 		}
 
-		var err error
+		// Get the StartPipelineOperation from the provider
+		startOperation, err := m.Provider.GetStartPipelineOperation()
+		if err != nil {
+			return err
+		}
+
 		if m.ManualCommitID && strings.TrimSpace(m.CommitID) == "" {
 			return fmt.Errorf(constants.MsgErrorEmptyCommitID)
 		}
 
-		// Start the pipeline execution
+		// Start the pipeline execution using the operation
 		ctx := context.Background()
-		err = m.Provider.StartPipeline(ctx, m.SelectedPipeline.Name, m.CommitID)
+		err = startOperation.StartPipelineExecution(ctx, m.SelectedPipeline.Name, m.CommitID)
 
 		HandlePipelineExecution(m, err)
 		return nil
@@ -131,14 +148,19 @@ func ExecuteAction(m *model.Model) error {
 		m.Provider = provider
 	}
 
-	var err error
+	// Get the CodePipelineManualApprovalOperation from the provider
+	approvalOperation, err := m.Provider.GetCodePipelineManualApprovalOperation()
+	if err != nil {
+		return err
+	}
+
 	if strings.TrimSpace(m.ApprovalComment) == "" {
 		return fmt.Errorf(constants.MsgErrorEmptyComment)
 	}
 
-	// Execute the approval action
+	// Execute the approval action using the operation
 	ctx := context.Background()
-	err = m.Provider.ApproveAction(ctx, *m.SelectedApproval, m.ApproveAction, m.ApprovalComment)
+	err = approvalOperation.ApproveAction(ctx, *m.SelectedApproval, m.ApproveAction, m.ApprovalComment)
 
 	HandleApprovalResult(m, err)
 	return nil

@@ -197,3 +197,33 @@ func (p *Provider) StartPipeline(ctx context.Context, pipelineName string, commi
 
 	return p.StartPipelineExecution(ctx, pipelineName, commitID)
 }
+
+// GetCodePipelineManualApprovalOperation returns the CodePipeline manual approval operation
+func (p *Provider) GetCodePipelineManualApprovalOperation() (providers.CodePipelineManualApprovalOperation, error) {
+	if !p.IsAuthenticated() {
+		return nil, fmt.Errorf("provider not authenticated")
+	}
+
+	// Create a wrapper that implements the CodePipelineManualApprovalOperation interface
+	return &codePipelineManualApprovalOperation{provider: p}, nil
+}
+
+// GetPipelineStatusOperation returns the pipeline status operation
+func (p *Provider) GetPipelineStatusOperation() (providers.PipelineStatusOperation, error) {
+	if !p.IsAuthenticated() {
+		return nil, fmt.Errorf("provider not authenticated")
+	}
+
+	// Create a wrapper that implements the PipelineStatusOperation interface
+	return &pipelineStatusOperation{provider: p}, nil
+}
+
+// GetStartPipelineOperation returns the start pipeline operation
+func (p *Provider) GetStartPipelineOperation() (providers.StartPipelineOperation, error) {
+	if !p.IsAuthenticated() {
+		return nil, fmt.Errorf("provider not authenticated")
+	}
+
+	// Create a wrapper that implements the StartPipelineOperation interface
+	return &startPipelineOperation{provider: p}, nil
+}

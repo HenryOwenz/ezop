@@ -6,7 +6,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
@@ -51,51 +50,15 @@ func FetchPipelineStatus(m *model.Model) tea.Cmd {
 			return model.ErrMsg{Err: err}
 		}
 
-		// Find the selected service
-		var selectedService providers.Service
-		for _, service := range provider.Services() {
-			if service.Name() == m.SelectedService.Name {
-				selectedService = service
-				break
-			}
+		// Get the PipelineStatusOperation from the provider
+		statusOperation, err := provider.GetPipelineStatusOperation()
+		if err != nil {
+			return model.ErrMsg{Err: err}
 		}
 
-		if selectedService == nil {
-			return model.ErrMsg{Err: fmt.Errorf("selected service not found")}
-		}
-
-		// Find the selected category
-		var selectedCategory providers.Category
-		for _, category := range selectedService.Categories() {
-			if category.Name() == m.SelectedCategory.Name {
-				selectedCategory = category
-				break
-			}
-		}
-
-		if selectedCategory == nil {
-			return model.ErrMsg{Err: fmt.Errorf("selected category not found")}
-		}
-
-		// Find the operation for pipeline status
-		var statusOperation providers.Operation
-		for _, operation := range selectedCategory.Operations() {
-			if operation.Name() == "Pipeline Status" {
-				statusOperation = operation
-				break
-			}
-		}
-
-		if statusOperation == nil {
-			return model.ErrMsg{Err: fmt.Errorf("pipeline status operation not found")}
-		}
-
-		// We don't need to execute the operation anymore, as we'll get pipeline status directly from the provider
-		// Just keeping this code to maintain the validation of service/category/operation
-
-		// Get pipeline status directly from the provider
+		// Get pipeline status using the operation
 		ctx := context.Background()
-		pipelines, err := provider.GetStatus(ctx)
+		pipelines, err := statusOperation.GetPipelineStatus(ctx)
 		if err != nil {
 			return model.ErrMsg{Err: err}
 		}
@@ -120,9 +83,15 @@ func ExecutePipeline(m *model.Model) tea.Cmd {
 			return model.ErrMsg{Err: err}
 		}
 
-		// Execute the pipeline
+		// Get the StartPipelineOperation from the provider
+		startOperation, err := provider.GetStartPipelineOperation()
+		if err != nil {
+			return model.ErrMsg{Err: err}
+		}
+
+		// Execute the pipeline using the operation
 		ctx := context.Background()
-		err = provider.StartPipeline(ctx, m.SelectedPipeline.Name, m.CommitID)
+		err = startOperation.StartPipelineExecution(ctx, m.SelectedPipeline.Name, m.CommitID)
 		if err != nil {
 			return model.PipelineExecutionMsg{Err: err}
 		}

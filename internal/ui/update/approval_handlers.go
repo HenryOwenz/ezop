@@ -6,7 +6,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
@@ -61,51 +60,15 @@ func FetchApprovals(m *model.Model) tea.Cmd {
 			return model.ErrMsg{Err: err}
 		}
 
-		// Find the selected service
-		var selectedService providers.Service
-		for _, service := range provider.Services() {
-			if service.Name() == m.SelectedService.Name {
-				selectedService = service
-				break
-			}
+		// Get the CodePipelineManualApprovalOperation from the provider
+		approvalOperation, err := provider.GetCodePipelineManualApprovalOperation()
+		if err != nil {
+			return model.ErrMsg{Err: err}
 		}
 
-		if selectedService == nil {
-			return model.ErrMsg{Err: fmt.Errorf("selected service not found")}
-		}
-
-		// Find the selected category
-		var selectedCategory providers.Category
-		for _, category := range selectedService.Categories() {
-			if category.Name() == m.SelectedCategory.Name {
-				selectedCategory = category
-				break
-			}
-		}
-
-		if selectedCategory == nil {
-			return model.ErrMsg{Err: fmt.Errorf("selected category not found")}
-		}
-
-		// Find the selected operation
-		var selectedOperation providers.Operation
-		for _, operation := range selectedCategory.Operations() {
-			if operation.Name() == m.SelectedOperation.Name {
-				selectedOperation = operation
-				break
-			}
-		}
-
-		if selectedOperation == nil {
-			return model.ErrMsg{Err: fmt.Errorf("selected operation not found")}
-		}
-
-		// We don't need to execute the operation anymore, as we'll get approvals directly from the provider
-		// Just keeping this code to maintain the validation of service/category/operation
-
-		// Get approvals directly from the provider
+		// Get approvals using the operation
 		ctx := context.Background()
-		approvals, err := provider.GetApprovals(ctx)
+		approvals, err := approvalOperation.GetPendingApprovals(ctx)
 		if err != nil {
 			return model.ErrMsg{Err: err}
 		}
@@ -130,17 +93,15 @@ func ExecuteApproval(m *model.Model) tea.Cmd {
 			return model.ErrMsg{Err: err}
 		}
 
-		// Convert the legacy ApprovalAction to providers.ApprovalAction
-		providerApproval := providers.ApprovalAction{
-			PipelineName: m.SelectedApproval.PipelineName,
-			StageName:    m.SelectedApproval.StageName,
-			ActionName:   m.SelectedApproval.ActionName,
-			Token:        m.SelectedApproval.Token,
+		// Get the CodePipelineManualApprovalOperation from the provider
+		approvalOperation, err := provider.GetCodePipelineManualApprovalOperation()
+		if err != nil {
+			return model.ErrMsg{Err: err}
 		}
 
-		// Execute the approval action
+		// Execute the approval action using the operation
 		ctx := context.Background()
-		err = provider.ApproveAction(ctx, providerApproval, m.ApproveAction, m.ApprovalComment)
+		err = approvalOperation.ApproveAction(ctx, *m.SelectedApproval, m.ApproveAction, m.ApprovalComment)
 		if err != nil {
 			return model.ApprovalResultMsg{Err: err}
 		}

@@ -76,6 +76,15 @@ type Provider interface {
 
 	// StartPipeline starts a pipeline execution
 	StartPipeline(ctx context.Context, pipelineName string, commitID string) error
+
+	// GetCodePipelineManualApprovalOperation returns the CodePipeline manual approval operation
+	GetCodePipelineManualApprovalOperation() (CodePipelineManualApprovalOperation, error)
+
+	// GetPipelineStatusOperation returns the pipeline status operation
+	GetPipelineStatusOperation() (PipelineStatusOperation, error)
+
+	// GetStartPipelineOperation returns the start pipeline operation
+	GetStartPipelineOperation() (StartPipelineOperation, error)
 }
 
 // Service interface defines methods that all cloud services must implement
