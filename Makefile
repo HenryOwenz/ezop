@@ -7,7 +7,7 @@ GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 BINARY_NAME=cloudgate
 
-# Build flags
+# Build flags 
 LDFLAGS=-ldflags "-s -w"
 
 .PHONY: all build clean test coverage deps build-linux build-windows build-all lint
