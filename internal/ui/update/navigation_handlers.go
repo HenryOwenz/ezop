@@ -44,10 +44,10 @@ func NavigateBack(m *model.Model) *model.Model {
 			newModel.ProviderState.ProviderName = ""
 		}
 	case constants.ViewAWSConfig:
-		if m.AwsProfile != "" {
+		if m.GetAwsProfile() != "" {
 			// If we're in region selection, just clear region and stay in AWS config
-			newModel.AwsRegion = ""
-			newModel.AwsProfile = ""
+			newModel.SetAwsRegion("")
+			newModel.SetAwsProfile("")
 			// Don't change the view - we'll stay in AWS config to show profiles
 		} else {
 			// If we're in profile selection, go back to providers
@@ -242,20 +242,20 @@ func HandleEnter(m *model.Model) (tea.Model, tea.Cmd) {
 		case constants.ViewAWSConfig:
 			// For backward compatibility
 			// Get the entered value
-			if m.AwsProfile == "" {
+			if m.GetAwsProfile() == "" {
 				// Setting profile
-				newModel.AwsProfile = value
+				newModel.SetAwsProfile(value)
 				newModel.ManualInput = false
 				newModel.ResetTextInput()
 				view.UpdateTableForView(newModel)
 			} else {
 				// Setting region and moving to next view
-				newModel.AwsRegion = value
+				newModel.SetAwsRegion(value)
 				newModel.ManualInput = false
 				newModel.ResetTextInput()
 
 				// Create the provider with the selected profile and region
-				_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.AwsProfile, newModel.AwsRegion)
+				_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.GetAwsProfile(), newModel.GetAwsRegion())
 				if err != nil {
 					return WrapModel(newModel), func() tea.Msg {
 						return model.ErrMsg{Err: err}
@@ -467,7 +467,7 @@ func HandleAWSConfigSelection(m *model.Model) (tea.Model, tea.Cmd) {
 			newModel.TextInput.Focus()
 
 			// Set appropriate placeholder based on context
-			if m.AwsProfile == "" {
+			if m.GetAwsProfile() == "" {
 				newModel.TextInput.Placeholder = constants.MsgEnterProfile
 			} else {
 				newModel.TextInput.Placeholder = constants.MsgEnterRegion
@@ -477,14 +477,14 @@ func HandleAWSConfigSelection(m *model.Model) (tea.Model, tea.Cmd) {
 		}
 
 		// Handle regular selection
-		if m.AwsProfile == "" {
-			newModel.AwsProfile = selected[0]
+		if m.GetAwsProfile() == "" {
+			newModel.SetAwsProfile(selected[0])
 			view.UpdateTableForView(newModel)
 		} else {
-			newModel.AwsRegion = selected[0]
+			newModel.SetAwsRegion(selected[0])
 
 			// Create the provider with the selected profile and region
-			_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.AwsProfile, newModel.AwsRegion)
+			_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.GetAwsProfile(), newModel.GetAwsRegion())
 			if err != nil {
 				return WrapModel(newModel), func() tea.Msg {
 					return model.ErrMsg{Err: err}

@@ -43,9 +43,6 @@ clean:
 	rm -f release/*
 	rm -rf release
 
-test:
-	$(GOTEST) -v ./...
-
 coverage:
 	$(GOTEST) -coverprofile=coverage.out ./...
 	$(GOCMD) tool cover -html=coverage.out
@@ -76,3 +73,23 @@ run: build
 # Install builds and installs the binary
 install: build
 	mv $(BINARY_NAME) $(GOPATH)/bin/cg 
+
+# Test targets
+.PHONY: test test-verbose test-coverage test-integration test-unit
+
+# Main test target that runs all tests
+test:
+	$(GOTEST) -v ./...
+
+test-verbose:
+	$(GOTEST) -v ./...
+
+test-coverage:
+	$(GOTEST) -coverprofile=coverage.out ./...
+	$(GOCMD) tool cover -html=coverage.out
+
+test-integration:
+	$(GOTEST) -v ./internal/ui/integration_test
+
+test-unit:
+	$(GOTEST) -v ./internal/ui/model ./internal/ui/update ./internal/ui/view
