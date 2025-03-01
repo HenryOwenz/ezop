@@ -13,138 +13,108 @@
 ```
 
 # cloudgate
-A seamless gateway to your cloud universe. cloudgate is a Terminal Application that unifies your multi-cloud operations across AWS, Azure, and GCP.
+
+A terminal-based application that unifies multi-cloud operations across AWS, Azure, and GCP.
+
 > *Where your clouds converge.*
+
+[![Go CI](https://github.com/HenryOwenz/cloudgate/actions/workflows/go-ci.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/go-ci.yml)
 
 ## Features
 
-### Cloud Provider Integration
-- **AWS** - Full support for AWS services and operations
-- **Azure** - Coming soon
-- **GCP** - Coming soon
+- **AWS Integration**
+  - Multi-account/region management
+  - CodePipeline operations (view, approve, trigger)
+  - Pipeline status monitoring
+  - Approval workflow management
 
-### Core Capabilities
+- **Terminal UI**
+  - Fast, keyboard-driven interface
+  - Context-aware navigation
+  - Visual feedback and safety controls
 
-#### AWS
-- **Multi-Account Management** - Switch between AWS profiles and regions seamlessly
-- **CodePipeline Integration** - View, approve, and trigger pipeline executions
-- **Pipeline Status Monitoring** - Real-time updates on pipeline states and stages
-- **Approval Workflows** - Manage manual approval actions in CodePipeline
-
-#### Azure (Coming Soon)
-
-#### GCP (Coming Soon)
-
-### User Experience
-- **Terminal-Based UI** - Fast, responsive, and keyboard-driven interface
-- **Context-Aware Navigation** - Intuitive menus that adapt to your workflow
-- **Safety Controls** - Confirmation steps and clear operation previews
-- **Visual Feedback** - Loading indicators and status updates
+- **Coming Soon**
+  - Azure integration
+  - GCP support
 
 ## Installation
 
-### Linux and MacOS
+### Quick Install
 
 ```bash
+# Linux/macOS
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.sh)"
-```
 
-### Windows
-
-Open PowerShell and run:
-
-```powershell
+# Windows (PowerShell)
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))
 ```
 
-After installation, you can run cloudgate using the `cg` command from anywhere in your terminal.
+### From Source
 
-## Prerequisites
-
-- Go 1.21 or later
-- Cloud provider credentials configured:
-  - AWS: `~/.aws/credentials` or `~/.aws/config`
-  - Azure: Coming soon
-  - GCP: Coming soon
-
-## Required AWS Permissions
-
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "<service>:<action>",
-                
-            ],
-            "Resource": "arn:aws:<service>:*:*:*"
-        }
-    ]
-}
+```bash
+git clone https://github.com/HenryOwenz/cloudgate.git
+cd cloudgate
+make build
+make install  # Installs as 'cg' in your $GOPATH/bin
 ```
+
+## Requirements
+
+- Go 1.21+
+- AWS credentials configured in `~/.aws/credentials` or `~/.aws/config`
 
 ## Usage
 
-1. Launch cloudgate:
-   ```bash
-   cg
-   ```
+```bash
+cg  # Launch the application
+```
 
-2. Navigation:
-   - ↑/↓: Navigate options
-   - Enter: Select
-   - Esc/-: Go back
-   - Tab: Toggle input (where available)
-   - q: Quit
+### Navigation
 
-3. Provider Setup:
-   - Select cloud provider
-   - Choose account/profile
-   - Select region/location
-   - Access your services
+| Key       | Action                   |
+|-----------|--------------------------|
+| ↑/↓       | Navigate options         |
+| Enter     | Select/Confirm           |
+| Esc/-     | Go back/Cancel           |
+| Tab       | Toggle manual input      |
+| q         | Quit application         |
+| Ctrl+c    | Force quit               |
 
-4. Operations:
-   - Choose service category
-   - Select specific operation
-   - Follow interactive prompts
-   - Monitor progress
+## Development
 
-## Key Bindings
+### Testing
 
-- `↑/↓`: Navigate through options
-- `Enter`: Select/Confirm
-- `Esc/-`: Go back/Cancel
-- `Tab`: Toggle manual input
-- `q`: Quit application
-- `Ctrl+c`: Force quit
+```bash
+make test          # Run all tests
+make test-unit     # Run unit tests only
+make test-integration  # Run integration tests only
+make test-coverage  # Generate coverage report
+```
+
+### CI/CD
+
+This project uses GitHub Actions for continuous integration:
+- Automated builds on each push and pull request
+- Unit and integration tests
+- Code linting with golangci-lint
+- Test coverage reporting
 
 ## Architecture
 
-cloudgate is built with a dual-layer architecture that separates cloud provider implementations from the application's business logic. This design enables easy extension to support multiple cloud providers while maintaining a clean and maintainable codebase.
+cloudgate uses a dual-layer architecture:
+- Provider layer: Abstracts cloud provider APIs
+- UI layer: Handles user interaction and workflow
 
-For detailed information about the architecture and design patterns used in cloudgate, please refer to the [documentation directory](documentation/README.md).
-
-## Future Enhancements
-
-- Azure integration
-- GCP support
-- Enhanced pipeline visualization
-- Cross-provider operations
-- Resource management
-- Cost optimization
-- Security scanning
-- Custom themes
-- Configuration profiles
-- Operation history
-- Detailed analytics
+This design enables easy extension to support multiple cloud providers while maintaining a clean codebase.
 
 ## Contributing
 
-Contributions are welcome! Feel free to submit a Pull Request.
-
-Please read our [documentation](documentation/README.md) to understand the architecture and design patterns used in cloudgate before contributing.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Run tests (`make test`)
+4. Commit your changes (`git commit -m 'Add some amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 ## License
 
