@@ -55,15 +55,19 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 
 ## Installation
 
-### Quick Install
+### Quick Install / Upgrade
 
+**Linux/macOS:**
 ```bash
-# Linux/macOS
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.sh)"
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+```powershell
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))
 ```
+
+These scripts will automatically download and install the latest version of cloudgate, handling upgrades cleanly if you already have it installed.
 
 ### From Source
 
