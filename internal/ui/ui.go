@@ -1,12 +1,13 @@
 package ui
 
 import (
+	"github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/update"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Model is the main UI model that implements the tea.Model interface

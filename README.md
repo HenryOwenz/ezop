@@ -27,15 +27,34 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
   - CodePipeline operations (view, approve, trigger)
   - Pipeline status monitoring
   - Approval workflow management
+  - Lambda function management and details view
+  - Function metadata inspection (runtime, memory, code size, etc.)
+
+  <details>
+  <summary><b>📋 Available AWS Services & Operations</b></summary>
+  
+  | Service | Operation | Description |
+  |---------|-----------|-------------|
+  | **CodePipeline** | Pipeline Status | View status of all pipelines and their stages |
+  | | Pipeline Approvals | List, approve, or reject pending manual approvals |
+  | | Start Pipeline | Trigger pipeline execution with latest commit or specific revision |
+  | **Lambda** | Function Status | View all Lambda functions with runtime and last update info |
+  | | Function Details | Inspect detailed function configuration including:<br>• Memory allocation<br>• Timeout settings<br>• Code size<br>• Package type<br>• Architecture<br>• Role ARN<br>• Log group |
+  
+  *Operations can be performed using any configured AWS profile and region (one active profile/region at a time)*  
+  *Multi-account aggregation for services will be coming in the future*
+  </details>
 
 - **Terminal UI**
   - Fast, keyboard-driven interface
   - Context-aware navigation
   - Visual feedback and safety controls
+  - Formatted display of timestamps and resource sizes
 
 - **Coming Soon**
   - Azure integration
   - GCP support
+  - Additional AWS services (S3, EC2, etc.)
 
 ## Installation
 
@@ -60,7 +79,7 @@ make install  # Installs as 'cg' in your $GOPATH/bin
 
 ## Requirements
 
-- Go 1.21+
+- Go 1.22+
 - AWS credentials configured in `~/.aws/credentials` or `~/.aws/config`
 
 ## Usage
@@ -76,7 +95,6 @@ cg  # Launch the application
 | ↑/↓       | Navigate options         |
 | Enter     | Select/Confirm           |
 | Esc/-     | Go back/Cancel           |
-| Tab       | Toggle manual input      |
 | q         | Quit application         |
 | Ctrl+c    | Force quit               |
 
@@ -105,7 +123,7 @@ cloudgate uses a dual-layer architecture:
 - Provider layer: Abstracts cloud provider APIs
 - UI layer: Handles user interaction and workflow
 
-This design enables easy extension to support multiple cloud providers while maintaining a clean codebase.
+The application follows a modular design pattern that makes it easy to add new cloud services and operations. Each service is implemented as a separate module with clear interfaces, allowing for independent development and testing.
 
 ## Contributing
 

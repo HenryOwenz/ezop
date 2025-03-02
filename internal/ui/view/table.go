@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
+
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
-	"github.com/charmbracelet/bubbles/table"
 )
 
 // UpdateTableForView updates the table model based on the current view

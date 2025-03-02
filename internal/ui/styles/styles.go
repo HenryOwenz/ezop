@@ -1,9 +1,10 @@
 package styles
 
 import (
-	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 )
 
 // Styles holds all the UI styling configurations

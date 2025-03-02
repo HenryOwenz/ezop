@@ -3,14 +3,15 @@ package model
 import (
 	"sort"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
-	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
-	"github.com/HenryOwenz/cloudgate/internal/ui/styles"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
+	"github.com/HenryOwenz/cloudgate/internal/ui/styles"
 )
 
 // Model represents the application state
