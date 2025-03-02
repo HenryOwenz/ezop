@@ -26,7 +26,7 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 [![Go ReportCard](https://goreportcard.com/badge/HenryOwenz/cloudgate)](https://goreportcard.com/report/HenryOwenz/cloudgate)
 
 <p align="center">
-  <img src="https://github.com/HenryOwenz/cloudgate/releases/download/v0.1.3/cloudgate-demo.gif" width="100%" alt="cloudgate Demo">
+  <img src="https://github.com/HenryOwenz/cloudgate/releases/download/v0.1.4/cloudgate-demo.gif" width="100%" alt="cloudgate Demo">
 </p>
 
 ## Features 
