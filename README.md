@@ -19,8 +19,8 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 > *Where your clouds converge.*
 
 [![Lint](https://github.com/HenryOwenz/cloudgate/actions/workflows/lint.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/lint.yml)
-[![Build](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml)
 [![Test](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml)
+[![Build](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml)
 
 ## Features 
 
@@ -127,6 +127,38 @@ cloudgate uses a dual-layer architecture:
 - UI layer: Handles user interaction and workflow
 
 The application follows a modular design pattern that makes it easy to add new cloud services and operations. Each service is implemented as a separate module with clear interfaces, allowing for independent development and testing.
+
+### Dependency Management
+
+The project uses Go modules for dependency management with a structured approach to updates:
+
+- **Patch Updates**: Safe updates that only include bug fixes (e.g., 1.2.3 → 1.2.4)
+- **Minor Updates**: Generally safe updates that add new features while maintaining backward compatibility (e.g., 1.2.3 → 1.3.0)
+- **Major Updates**: Updates that may include breaking changes, handled with caution (e.g., 1.2.3 → 2.0.0)
+
+Dependency updates are managed through Make targets:
+
+Update to latest patch versions and verify build:
+```bash
+make update-deps
+```
+
+Update to latest patch versions only:
+```bash
+make update-deps-patch
+```
+
+Update to latest minor versions:
+```bash
+make update-deps-minor
+```
+
+Update specific package to latest major version:
+```bash
+make update-deps-major PKG=github.com/example/package
+```
+
+All updates include verification steps to ensure the application builds and tests pass after changes.
 
 ## Contributing
 

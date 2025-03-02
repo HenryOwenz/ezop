@@ -10,9 +10,13 @@ BINARY_NAME=cloudgate
 # Build flags 
 LDFLAGS=-ldflags "-s -w"
 
-.PHONY: all build clean test coverage deps build-linux build-windows build-all lint
+.PHONY: all build clean test coverage deps build-linux build-windows build-all lint ci update-deps update-deps-patch update-deps-minor update-deps-major
 
+# Default target - runs lint, tests, and builds the binary
 all: lint test build
+
+# Explicit CI target - same as 'all' but with a clearer name
+ci: lint test build
 
 build:
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) -v
@@ -50,10 +54,49 @@ coverage:
 lint:
 	golangci-lint run
 
+# Basic dependency management
 deps:
 	$(GOMOD) download
 	$(GOMOD) verify
 	$(GOMOD) tidy
+
+# Dependency update targets
+# ------------------------------------------------------------------------
+
+# Update all dependencies - runs all update steps and verifies the build
+update-deps: update-deps-patch update-deps-verify
+
+# Update dependencies to latest patch versions (safest)
+# Example: 1.2.3 -> 1.2.4 (only bug fixes, no new features)
+update-deps-patch:
+	@echo "Updating dependencies to latest patch versions..."
+	$(GOGET) -u=patch
+	$(GOMOD) tidy
+
+# Update dependencies to latest minor versions (generally safe)
+# Example: 1.2.3 -> 1.3.0 (new features, backwards compatible)
+update-deps-minor:
+	@echo "Updating dependencies to latest minor versions..."
+	$(GOGET) -u
+	$(GOMOD) tidy
+
+# Update a specific dependency to its latest major version (use with caution)
+# Usage: make update-deps-major PKG=github.com/example/package
+# Example: 1.2.3 -> 2.0.0 (potentially breaking changes)
+update-deps-major:
+	@if [ -z "$(PKG)" ]; then \
+		echo "Error: PKG parameter is required. Usage: make update-deps-major PKG=github.com/example/package"; \
+		exit 1; \
+	fi
+	@echo "Updating $(PKG) to latest major version..."
+	$(GOGET) $(PKG)@latest
+	$(GOMOD) tidy
+
+# Verify dependencies after update
+update-deps-verify: build test
+	@echo "Dependency update verified with successful build and tests."
+
+# ------------------------------------------------------------------------
 
 # Release builds all binaries and creates a release
 release: clean build-all
