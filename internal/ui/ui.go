@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"sort"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -74,6 +77,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newModel.core.Provider = msg.Provider
 		newModel.core.CurrentView = constants.ViewFunctionStatus
 		newModel.core.IsLoading = false
+
+		// Sort functions by name in ascending order (case-insensitive)
+		// This preserves the original case of function names in the display
+		// while providing a consistent sorting order regardless of casing.
+		// The lowercase conversion is used only for comparison during sorting.
+		sort.Slice(newModel.core.Functions, func(i, j int) bool {
+			return strings.ToLower(newModel.core.Functions[i].Name) < strings.ToLower(newModel.core.Functions[j].Name)
+		})
+
 		view.UpdateTableForView(newModel.core)
 		return newModel, nil
 	case spinner.TickMsg:
