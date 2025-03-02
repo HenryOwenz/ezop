@@ -18,9 +18,11 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 
 > *Where your clouds converge.*
 
+[![Latest Release](https://img.shields.io/github/release/HenryOwenz/cloudgate.svg)](https://github.com/HenryOwenz/cloudgate/releases)
 [![Lint](https://github.com/HenryOwenz/cloudgate/actions/workflows/lint.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/lint.yml)
 [![Test](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml)
 [![Build](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml)
+[![Go ReportCard](https://goreportcard.com/badge/HenryOwenz/cloudgate)](https://goreportcard.com/report/HenryOwenz/cloudgate)
 
 ## Features 
 
@@ -112,31 +114,13 @@ make test-integration  # Run integration tests only
 make test-coverage  # Generate coverage report
 ```
 
-### CI/CD
-
-This project uses GitHub Actions for continuous integration:
-- Automated builds on each push and pull request
-- Unit and integration tests
-- Code linting with golangci-lint
-- Test coverage reporting
-
-## Architecture
-
-cloudgate uses a dual-layer architecture:
-- Provider layer: Abstracts cloud provider APIs
-- UI layer: Handles user interaction and workflow
-
-The application follows a modular design pattern that makes it easy to add new cloud services and operations. Each service is implemented as a separate module with clear interfaces, allowing for independent development and testing.
-
 ### Dependency Management
 
-The project uses Go modules for dependency management with a structured approach to updates:
+The project uses two complementary approaches to dependency management:
 
-- **Patch Updates**: Safe updates that only include bug fixes (e.g., 1.2.3 → 1.2.4)
-- **Minor Updates**: Generally safe updates that add new features while maintaining backward compatibility (e.g., 1.2.3 → 1.3.0)
-- **Major Updates**: Updates that may include breaking changes, handled with caution (e.g., 1.2.3 → 2.0.0)
+#### 1. Manual Updates via Make Targets
 
-Dependency updates are managed through Make targets:
+For direct control over dependency updates:
 
 Update to latest patch versions and verify build:
 ```bash
@@ -158,7 +142,34 @@ Update specific package to latest major version:
 make update-deps-major PKG=github.com/example/package
 ```
 
-All updates include verification steps to ensure the application builds and tests pass after changes.
+#### 2. Automated Updates via Dependabot
+
+The project uses GitHub Dependabot to automatically create pull requests for dependency updates:
+
+- Weekly checks for Go module updates
+- Monthly checks for GitHub Actions updates
+- Automatic testing of dependency updates
+- Grouped updates to reduce PR noise
+- Safety limits on open PRs to prevent overwhelming the repository
+
+Dependabot configuration can be found in [.github/dependabot.yml](https://github.com/HenryOwenz/cloudgate/blob/main/.github/dependabot.yml).
+
+### CI/CD
+
+This project uses GitHub Actions for continuous integration:
+- Automated builds on each push and pull request
+- Unit and integration tests
+- Code linting with golangci-lint
+- Test coverage reporting
+- Automatic testing of Dependabot PRs
+
+## Architecture
+
+cloudgate uses a dual-layer architecture:
+- Provider layer: Abstracts cloud provider APIs
+- UI layer: Handles user interaction and workflow
+
+The application follows a modular design pattern that makes it easy to add new cloud services and operations. Each service is implemented as a separate module with clear interfaces, allowing for independent development and testing.
 
 ## Contributing
 
