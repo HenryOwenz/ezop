@@ -12,6 +12,21 @@ const (
 	KeyAltDown = "j"
 	KeyAltBack = "-"
 	KeyTab     = "tab"
+
+	// Vim-like navigation keys
+	KeyGotoTop         = "g"
+	KeyGotoBottom      = "G"
+	KeyHome            = "home"
+	KeyEnd             = "end"
+	KeyHalfPageUp      = "ctrl+u"
+	KeyHalfPageDown    = "ctrl+d"
+	KeyAltHalfPageUp   = "u"
+	KeyAltHalfPageDown = "d"
+	KeyPageUp          = "pgup"
+	KeyPageDown        = "pgdown"
+	KeyAltPageUp       = "b"
+	KeyAltPageDown     = "f"
+	KeySpace           = " "
 )
 
 // Authentication method constants

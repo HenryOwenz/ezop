@@ -153,6 +153,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			newModel := m.Clone()
 			newModel.core.Table.MoveDown(1)
 			return newModel, nil
+		// Add vim-like navigation keys
+		case constants.KeyGotoTop, constants.KeyHome:
+			newModel := m.Clone()
+			newModel.core.Table.GotoTop()
+			return newModel, nil
+		case constants.KeyGotoBottom, constants.KeyEnd:
+			newModel := m.Clone()
+			newModel.core.Table.GotoBottom()
+			return newModel, nil
+		case constants.KeyHalfPageUp, constants.KeyAltHalfPageUp:
+			newModel := m.Clone()
+			newModel.core.Table.MoveUp(newModel.core.Table.Height() / 2)
+			return newModel, nil
+		case constants.KeyHalfPageDown, constants.KeyAltHalfPageDown:
+			newModel := m.Clone()
+			newModel.core.Table.MoveDown(newModel.core.Table.Height() / 2)
+			return newModel, nil
+		case constants.KeyPageUp, constants.KeyAltPageUp:
+			newModel := m.Clone()
+			newModel.core.Table.MoveUp(newModel.core.Table.Height())
+			return newModel, nil
+		case constants.KeyPageDown, constants.KeyAltPageDown, constants.KeySpace:
+			newModel := m.Clone()
+			newModel.core.Table.MoveDown(newModel.core.Table.Height())
+			return newModel, nil
 		case constants.KeyTab:
 			// Tab key is no longer used
 			return m, nil
