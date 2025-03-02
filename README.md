@@ -26,11 +26,7 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 
 - **AWS Integration**
   - Multi-account/region management
-  - CodePipeline operations (view, approve, trigger)
-  - Pipeline status monitoring
-  - Approval workflow management
-  - Lambda function management and details view
-  - Function metadata inspection (runtime, memory, code size, etc.)
+
 
   <details>
   <summary><b>📋 Available AWS Services & Operations</b></summary>
