@@ -1,4 +1,4 @@
-name: Go CI
+name: Test
 
 on:
   push:
@@ -17,8 +17,8 @@ on:
       - 'go.sum'
 
 jobs:
-  build:
-    name: Build and Test
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,9 +31,6 @@ jobs:
       
       - name: Install dependencies
         run: go mod download
-      
-      - name: Build
-        run: make build
       
       - name: Run unit tests
         run: make test-unit
@@ -49,22 +46,4 @@ jobs:
         with:
           name: coverage-report
           path: coverage.out
-          retention-days: 7
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22.x'
-          cache: true
-      
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-      
-      - name: Run golangci-lint
-        run: make lint 
+          retention-days: 7 

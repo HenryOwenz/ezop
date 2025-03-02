@@ -18,7 +18,9 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 
 > *Where your clouds converge.*
 
-[![Go CI](https://github.com/HenryOwenz/cloudgate/actions/workflows/go-ci.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/go-ci.yml)
+[![Lint](https://github.com/HenryOwenz/cloudgate/actions/workflows/lint.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/lint.yml)
+[![Build](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml)
+[![Test](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml)
 
 ## Features
 
