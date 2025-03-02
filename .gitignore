@@ -1,5 +1,6 @@
 docs/
 release/
+*/**/*.gif
 
 # Binaries for programs and plugins
 *.exe
