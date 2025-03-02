@@ -79,12 +79,22 @@ func TestGetContextText(t *testing.T) {
 			setupModel: func() *model.Model {
 				m := model.New()
 				m.CurrentView = constants.ViewSelectCategory
+				m.SetAwsProfile("test-profile")
+				m.SetAwsRegion("us-west-2")
 				m.SelectedService = &model.Service{Name: "TestService"}
 				return m
 			},
-			expectedText: "Service: TestService",
+			expectedText: "",
 			expectedChecks: func(t *testing.T, text string) {
-				// No additional checks needed
+				if !strings.Contains(text, "Profile: test-profile") {
+					t.Errorf("Expected context text to contain profile, got '%s'", text)
+				}
+				if !strings.Contains(text, "Region: us-west-2") {
+					t.Errorf("Expected context text to contain region, got '%s'", text)
+				}
+				if !strings.Contains(text, "Service: TestService") {
+					t.Errorf("Expected context text to contain service, got '%s'", text)
+				}
 			},
 		},
 		{
@@ -92,12 +102,20 @@ func TestGetContextText(t *testing.T) {
 			setupModel: func() *model.Model {
 				m := model.New()
 				m.CurrentView = constants.ViewSelectOperation
+				m.SetAwsProfile("test-profile")
+				m.SetAwsRegion("us-west-2")
 				m.SelectedService = &model.Service{Name: "TestService"}
 				m.SelectedCategory = &model.Category{Name: "TestCategory"}
 				return m
 			},
 			expectedText: "",
 			expectedChecks: func(t *testing.T, text string) {
+				if !strings.Contains(text, "Profile: test-profile") {
+					t.Errorf("Expected context text to contain profile, got '%s'", text)
+				}
+				if !strings.Contains(text, "Region: us-west-2") {
+					t.Errorf("Expected context text to contain region, got '%s'", text)
+				}
 				if !strings.Contains(text, "Service: TestService") {
 					t.Errorf("Expected context text to contain service, got '%s'", text)
 				}
@@ -154,6 +172,8 @@ func TestGetContextText(t *testing.T) {
 			setupModel: func() *model.Model {
 				m := model.New()
 				m.CurrentView = constants.ViewConfirmation
+				m.SetAwsProfile("test-profile")
+				m.SetAwsRegion("us-west-2")
 				m.SetSelectedApproval(&providers.ApprovalAction{
 					PipelineName: "TestPipeline",
 					StageName:    "TestStage",
@@ -163,6 +183,12 @@ func TestGetContextText(t *testing.T) {
 			},
 			expectedText: "",
 			expectedChecks: func(t *testing.T, text string) {
+				if !strings.Contains(text, "Profile: test-profile") {
+					t.Errorf("Expected context text to contain profile, got '%s'", text)
+				}
+				if !strings.Contains(text, "Region: us-west-2") {
+					t.Errorf("Expected context text to contain region, got '%s'", text)
+				}
 				if !strings.Contains(text, "Pipeline: TestPipeline") {
 					t.Errorf("Expected context text to contain pipeline, got '%s'", text)
 				}

@@ -148,7 +148,9 @@ func getSelectCategoryContextText(m *model.Model) string {
 	if m.SelectedService == nil {
 		return ""
 	}
-	return fmt.Sprintf("Service: %s",
+	return fmt.Sprintf("Profile: %s\nRegion: %s\nService: %s",
+		m.AwsProfile,
+		m.AwsRegion,
 		m.SelectedService.Name)
 }
 
@@ -157,7 +159,9 @@ func getSelectOperationContextText(m *model.Model) string {
 	if m.SelectedService == nil || m.SelectedCategory == nil {
 		return ""
 	}
-	return fmt.Sprintf("Service: %s\nCategory: %s",
+	return fmt.Sprintf("Profile: %s\nRegion: %s\nService: %s\nCategory: %s",
+		m.AwsProfile,
+		m.AwsRegion,
 		m.SelectedService.Name,
 		m.SelectedCategory.Name)
 }
@@ -183,7 +187,9 @@ func getConfirmationSummaryContextText(m *model.Model) string {
 	if m.SelectedApproval == nil {
 		return ""
 	}
-	return fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s",
+	return fmt.Sprintf("Profile: %s\nRegion: %s\nPipeline: %s\nStage: %s\nAction: %s",
+		m.AwsProfile,
+		m.AwsRegion,
 		m.SelectedApproval.PipelineName,
 		m.SelectedApproval.StageName,
 		m.SelectedApproval.ActionName)
@@ -210,7 +216,9 @@ func getExecutingActionContextText(m *model.Model) string {
 	if m.SelectedApproval == nil {
 		return ""
 	}
-	return fmt.Sprintf("Pipeline: %s\nStage: %s\nAction: %s\nComment: %s",
+	return fmt.Sprintf("Profile: %s\nRegion: %s\nPipeline: %s\nStage: %s\nAction: %s\nComment: %s",
+		m.AwsProfile,
+		m.AwsRegion,
 		m.SelectedApproval.PipelineName,
 		m.SelectedApproval.StageName,
 		m.SelectedApproval.ActionName,
@@ -237,7 +245,9 @@ func getPipelineStagesContextText(m *model.Model) string {
 
 // getFunctionStatusContextText returns the context text for the function status view
 func getFunctionStatusContextText(m *model.Model) string {
-	return fmt.Sprintf("Service: %s\nCategory: %s",
+	return fmt.Sprintf("Profile: %s\nRegion: %s\nService: %s\nCategory: %s",
+		m.AwsProfile,
+		m.AwsRegion,
 		m.SelectedService.Name,
 		m.SelectedCategory.Name)
 }
@@ -247,7 +257,10 @@ func getFunctionDetailsContextText(m *model.Model) string {
 	if m.SelectedFunction == nil {
 		return ""
 	}
-	return fmt.Sprintf("Function: %s", m.SelectedFunction.Name)
+	return fmt.Sprintf("Profile: %s\nRegion: %s\nFunction: %s",
+		m.AwsProfile,
+		m.AwsRegion,
+		m.SelectedFunction.Name)
 }
 
 // getTitleText returns the appropriate title for the current view
