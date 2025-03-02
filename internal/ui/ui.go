@@ -114,6 +114,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case constants.KeyCtrlC, constants.KeyQ:
 			return m, tea.Quit
 		case constants.KeyEnter:
+			// If there's an error, clear it and allow navigation
+			if m.core.Err != nil {
+				newModel := m.Clone()
+				newModel.core.Err = nil
+				return newModel, nil
+			}
+
 			modelWrapper, cmd := update.HandleEnter(m.core)
 			if wrapper, ok := modelWrapper.(update.ModelWrapper); ok {
 				// Since ModelWrapper embeds *model.Model, we can create a new Model with it
@@ -125,6 +132,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return modelWrapper, cmd
 		case constants.KeyEsc, constants.KeyAltBack:
+			// If there's an error, clear it and navigate back
+			if m.core.Err != nil {
+				newCore := update.NavigateBack(m.core)
+				newCore.Err = nil // Clear the error
+				view.UpdateTableForView(newCore)
+				return Model{core: newCore}, nil
+			}
+
 			// Only use '-' for back navigation if not in text input mode
 			if msg.String() == constants.KeyAltBack && m.core.ManualInput {
 				// If in text input mode, '-' should be treated as a character

@@ -45,7 +45,7 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
   | | Pipeline Approvals | List, approve, or reject pending manual approvals |
   | | Start Pipeline | Trigger pipeline execution with latest commit or specific revision |
   | **Lambda** | | |
-  | | Function Status | View all Lambda functions with runtime and last update info<br><br>**Function Details View:**<br>Select any function to inspect detailed configuration including:<br>• Memory allocation<br>• Timeout settings<br>• Code size<br>• Package type<br>• Architecture<br>• Role ARN<br>• Log group |
+  | | Function Status | View all Lambda functions with runtime and last update info<br><br>**Function Details View:**<br>Select any function to inspect detailed configuration including memory, timeout, architecture, and other key attributes |
   
   *Operations can be performed using any configured AWS profile and region (one active profile/region at a time)*  
   *Multi-account aggregation for services will be coming in the future*
@@ -56,6 +56,7 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
   - Context-aware navigation
   - Visual feedback and safety controls
   - Formatted display of timestamps and resource sizes
+  - Vim-style navigation ('-' for backwards navigation, 'k/j' for up/down navigation, etc.)
 
 - **Coming Soon**
   - Azure integration
@@ -102,11 +103,16 @@ cg  # Launch the application
 
 | Key       | Action                   |
 |-----------|--------------------------|
-| ↑/↓       | Navigate options         |
+| ↑/↓ or k/j | Navigate options         |
 | Enter     | Select/Confirm           |
 | Esc/-     | Go back/Cancel           |
 | q         | Quit application         |
 | Ctrl+c    | Force quit               |
+| g/G       | Jump to top/bottom       |
+| u/d       | Half page up/down        |
+| b/f       | Page up/down             |
+
+**Note:** Vim-style navigation keys (g, G, u, d, etc.) work in table views but are passed through as text when in input mode. Use Esc to exit text input mode.
 
 ## Development
 
