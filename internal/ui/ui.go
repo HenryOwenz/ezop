@@ -155,26 +155,68 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return newModel, nil
 		// Add vim-like navigation keys
 		case constants.KeyGotoTop, constants.KeyHome:
+			// If in text input mode, pass the key to the text input
+			if m.core.ManualInput {
+				newModel := m.Clone()
+				var cmd tea.Cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
+			}
 			newModel := m.Clone()
 			newModel.core.Table.GotoTop()
 			return newModel, nil
 		case constants.KeyGotoBottom, constants.KeyEnd:
+			// If in text input mode, pass the key to the text input
+			if m.core.ManualInput {
+				newModel := m.Clone()
+				var cmd tea.Cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
+			}
 			newModel := m.Clone()
 			newModel.core.Table.GotoBottom()
 			return newModel, nil
 		case constants.KeyHalfPageUp, constants.KeyAltHalfPageUp:
+			// If in text input mode, pass the key to the text input
+			if m.core.ManualInput {
+				newModel := m.Clone()
+				var cmd tea.Cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
+			}
 			newModel := m.Clone()
 			newModel.core.Table.MoveUp(newModel.core.Table.Height() / 2)
 			return newModel, nil
 		case constants.KeyHalfPageDown, constants.KeyAltHalfPageDown:
+			// If in text input mode, pass the key to the text input
+			if m.core.ManualInput {
+				newModel := m.Clone()
+				var cmd tea.Cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
+			}
 			newModel := m.Clone()
 			newModel.core.Table.MoveDown(newModel.core.Table.Height() / 2)
 			return newModel, nil
 		case constants.KeyPageUp, constants.KeyAltPageUp:
+			// If in text input mode, pass the key to the text input
+			if m.core.ManualInput {
+				newModel := m.Clone()
+				var cmd tea.Cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
+			}
 			newModel := m.Clone()
 			newModel.core.Table.MoveUp(newModel.core.Table.Height())
 			return newModel, nil
 		case constants.KeyPageDown, constants.KeyAltPageDown, constants.KeySpace:
+			// If in text input mode, pass the key to the text input
+			if m.core.ManualInput {
+				newModel := m.Clone()
+				var cmd tea.Cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
+			}
 			newModel := m.Clone()
 			newModel.core.Table.MoveDown(newModel.core.Table.Height())
 			return newModel, nil
