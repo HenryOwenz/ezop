@@ -33,10 +33,12 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
   
   | Service | Operation | Description |
   |---------|-----------|-------------|
-  | **CodePipeline** | Pipeline Status | View status of all pipelines and their stages |
+  | **CodePipeline** | | |
+  | | Pipeline Status | View status of all pipelines and their stages |
   | | Pipeline Approvals | List, approve, or reject pending manual approvals |
   | | Start Pipeline | Trigger pipeline execution with latest commit or specific revision |
-  | **Lambda** | Function Status | View all Lambda functions with runtime and last update info<br><br>**Function Details View:**<br>Select any function to inspect detailed configuration including:<br>• Memory allocation<br>• Timeout settings<br>• Code size<br>• Package type<br>• Architecture<br>• Role ARN<br>• Log group |
+  | **Lambda** | | |
+  | | Function Status | View all Lambda functions with runtime and last update info<br><br>**Function Details View:**<br>Select any function to inspect detailed configuration including:<br>• Memory allocation<br>• Timeout settings<br>• Code size<br>• Package type<br>• Architecture<br>• Role ARN<br>• Log group |
   
   *Operations can be performed using any configured AWS profile and region (one active profile/region at a time)*  
   *Multi-account aggregation for services will be coming in the future*
