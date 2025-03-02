@@ -22,26 +22,23 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 [![Build](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml)
 [![Test](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml)
 
-## Features
+## Features 
 
 - **AWS Integration**
   - Multi-account/region management
-  - CodePipeline operations (view, approve, trigger)
-  - Pipeline status monitoring
-  - Approval workflow management
-  - Lambda function management and details view
-  - Function metadata inspection (runtime, memory, code size, etc.)
+
 
   <details>
   <summary><b>📋 Available AWS Services & Operations</b></summary>
   
   | Service | Operation | Description |
   |---------|-----------|-------------|
-  | **CodePipeline** | Pipeline Status | View status of all pipelines and their stages |
+  | **CodePipeline** | | |
+  | | Pipeline Status | View status of all pipelines and their stages |
   | | Pipeline Approvals | List, approve, or reject pending manual approvals |
   | | Start Pipeline | Trigger pipeline execution with latest commit or specific revision |
-  | **Lambda** | Function Status | View all Lambda functions with runtime and last update info |
-  | | Function Details | Inspect detailed function configuration including:<br>• Memory allocation<br>• Timeout settings<br>• Code size<br>• Package type<br>• Architecture<br>• Role ARN<br>• Log group |
+  | **Lambda** | | |
+  | | Function Status | View all Lambda functions with runtime and last update info<br><br>**Function Details View:**<br>Select any function to inspect detailed configuration including:<br>• Memory allocation<br>• Timeout settings<br>• Code size<br>• Package type<br>• Architecture<br>• Role ARN<br>• Log group |
   
   *Operations can be performed using any configured AWS profile and region (one active profile/region at a time)*  
   *Multi-account aggregation for services will be coming in the future*
@@ -60,15 +57,19 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 
 ## Installation
 
-### Quick Install
+### Quick Install / Upgrade
 
+**Linux/macOS:**
 ```bash
-# Linux/macOS
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.sh)"
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+```powershell
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/HenryOwenz/cloudgate/main/scripts/install.ps1'))
 ```
+
+These scripts will automatically download and install the latest version of cloudgate, handling upgrades cleanly if you already have it installed.
 
 ### From Source
 
