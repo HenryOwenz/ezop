@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the model architecture implemented in CloudGate to support multiple cloud providers. The architecture is designed to be flexible, extensible, and maintainable, allowing for easy addition of new cloud providers and services.
+This document describes the model architecture implemented in cloudgate to support multiple cloud providers. The architecture is designed to be flexible, extensible, and maintainable, allowing for easy addition of new cloud providers and services.
 
 ## Model Structure
 
@@ -12,6 +12,7 @@ The model architecture consists of several key components:
 2. **Provider State**: Manages provider-specific state and configuration
 3. **Authentication State**: Handles provider authentication
 4. **Input State**: Manages user input across different views
+5. **Operation-Specific State**: Manages state for specific operations like Lambda Function Status
 
 ### Core Model
 
@@ -246,103 +247,238 @@ type Provider interface {
     ApproveAction(ctx context.Context, action ApprovalAction, approved bool, comment string) error
     GetStatus(ctx context.Context) ([]PipelineStatus, error)
     StartPipeline(ctx context.Context, pipelineName string, commitID string) error
+    GetFunctionStatus(ctx context.Context) ([]FunctionStatus, error)
+    
+    // UI Operation interfaces
+    GetCodePipelineManualApprovalOperation() (CodePipelineManualApprovalOperation, error)
+    GetPipelineStatusOperation() (PipelineStatusOperation, error)
+    GetStartPipelineOperation() (StartPipelineOperation, error)
+    GetFunctionStatusOperation() (FunctionStatusOperation, error)
 }
 ```
 
-### Provider Registration
+### Service, Category, and Operation Interfaces
 
-Providers are registered with the application using a factory pattern to avoid import cycles:
+The provider architecture includes interfaces for services, categories, and operations:
 
 ```go
-// In internal/providers/factory.go
-func InitializeProviders(registry *ProviderRegistry) {
-    // Register AWS provider
-    awsProvider := CreateAWSProvider()
-    if awsProvider != nil {
-        registry.Register(awsProvider)
-    } else {
-        panic("Failed to create AWS provider")
-    }
+type Service interface {
+    // Name returns the service's name
+    Name() string
+    
+    // Description returns the service's description
+    Description() string
+    
+    // Categories returns all available categories for this service
+    Categories() []Category
 }
 
-// In internal/providers/aws/register.go
-func init() {
-    // Set the CreateAWSProvider function in the providers package
-    providers.CreateAWSProvider = func() providers.Provider {
-        return New()
-    }
+type Category interface {
+    // Name returns the category's name
+    Name() string
+    
+    // Description returns the category's description
+    Description() string
+    
+    // Operations returns all available operations for this category
+    Operations() []Operation
+    
+    // IsUIVisible returns whether this category should be visible in the UI
+    IsUIVisible() bool
+}
+
+type Operation interface {
+    // Name returns the operation's name
+    Name() string
+    
+    // Description returns the operation's description
+    Description() string
+    
+    // Execute executes the operation with the given parameters
+    Execute(ctx context.Context, params map[string]interface{}) (interface{}, error)
+    
+    // IsUIVisible returns whether this operation should be visible in the UI
+    IsUIVisible() bool
 }
 ```
 
-### Cloud Provider
+### UI Operation Interfaces
 
-The cloud provider implementations in `internal/cloud/` contain the actual cloud-specific functionality:
+The provider architecture includes specialized interfaces for UI operations:
+
+```go
+type UIOperation interface {
+    // Name returns the operation's name
+    Name() string
+    
+    // Description returns the operation's description
+    Description() string
+    
+    // IsUIVisible returns whether this operation should be visible in the UI
+    IsUIVisible() bool
+}
+
+type FunctionStatusOperation interface {
+    UIOperation
+    
+    // GetFunctionStatus returns the status of all Lambda functions
+    GetFunctionStatus(ctx context.Context) ([]FunctionStatus, error)
+}
+```
+
+### Data Types
+
+The provider architecture includes data types for various cloud resources:
+
+```go
+// FunctionStatus represents the status of a Lambda function
+type FunctionStatus struct {
+    Name         string
+    Runtime      string
+    Memory       int32
+    Timeout      int32
+    LastUpdate   string
+    Role         string
+    Handler      string
+    Description  string
+    FunctionArn  string
+    CodeSize     int64
+    Version      string
+    PackageType  string
+    Architecture string
+    LogGroup     string
+}
+```
+
+## Provider Registry
+
+The provider registry manages the available providers:
+
+```go
+type ProviderRegistry struct {
+    providers map[string]Provider
+    mu        sync.RWMutex
+}
+
+func NewProviderRegistry() *ProviderRegistry {
+    return &ProviderRegistry{
+        providers: make(map[string]Provider),
+    }
+}
+
+func (r *ProviderRegistry) Register(provider Provider) {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    r.providers[provider.Name()] = provider
+}
+
+func (r *ProviderRegistry) GetProvider(name string) (Provider, bool) {
+    r.mu.RLock()
+    defer r.mu.RUnlock()
+    provider, ok := r.providers[name]
+    return provider, ok
+}
+```
+
+## AWS Provider Implementation
+
+The AWS provider implements the Provider interface:
 
 ```go
 type Provider struct {
-    profile  string
-    region   string
-    services []cloud.Service
-}
-```
-
-### Provider Adapter
-
-The provider adapters in `internal/providers/` adapt cloud providers to the provider interface:
-
-```go
-type CloudProviderAdapter struct {
-    provider cloud.Provider
-    profile  string
-    region   string
-}
-```
-
-## View Flow
-
-The view flow is managed by the update package, which handles user input and updates the model accordingly:
-
-1. **Navigation**: Handles navigation between views
-2. **Selection**: Handles selection of providers, services, categories, and operations
-3. **Authentication**: Handles provider authentication
-4. **Configuration**: Handles provider configuration
-
-## Direct Provider Interaction
-
-The application now interacts directly with providers for cloud-specific operations:
-
-```go
-// Get approvals directly from the provider
-ctx := context.Background()
-approvals, err := provider.GetApprovals(ctx)
-if err != nil {
-    return model.ErrMsg{Err: err}
+    cloudProvider *aws.Provider
+    profile       string
+    region        string
+    authenticated bool
 }
 
-// Execute the approval action
-ctx := context.Background()
-err = provider.ApproveAction(ctx, providerApproval, m.ApproveAction, m.ApprovalComment)
-if err != nil {
-    return model.ApprovalResultMsg{Err: err}
+func (p *Provider) GetFunctionStatus(ctx context.Context) ([]providers.FunctionStatus, error) {
+    if !p.IsAuthenticated() {
+        return nil, fmt.Errorf("provider not authenticated")
+    }
+
+    // Load AWS config
+    cfg, err := config.LoadDefaultConfig(ctx,
+        config.WithSharedConfigProfile(p.profile),
+        config.WithRegion(p.region),
+    )
+    if err != nil {
+        return nil, fmt.Errorf("failed to load AWS config: %w", err)
+    }
+
+    client := lambda.NewFromConfig(cfg)
+
+    // List all functions
+    var functions []providers.FunctionStatus
+    var marker *string
+
+    for {
+        output, err := client.ListFunctions(ctx, &lambda.ListFunctionsInput{
+            Marker: marker,
+        })
+        if err != nil {
+            return nil, fmt.Errorf("failed to list functions: %w", err)
+        }
+
+        // Convert Lambda functions to FunctionStatus
+        for _, function := range output.Functions {
+            memory := int32(0)
+            if function.MemorySize != nil {
+                memory = *function.MemorySize
+            }
+
+            timeout := int32(0)
+            if function.Timeout != nil {
+                timeout = *function.Timeout
+            }
+
+            // Get architecture (default to x86_64 if not specified)
+            architecture := "x86_64"
+            if len(function.Architectures) > 0 {
+                architecture = string(function.Architectures[0])
+            }
+
+            // Get log group if available
+            logGroup := ""
+            if function.LoggingConfig != nil && function.LoggingConfig.LogGroup != nil {
+                logGroup = *function.LoggingConfig.LogGroup
+            }
+
+            functions = append(functions, providers.FunctionStatus{
+                Name:         aws.ToString(function.FunctionName),
+                Runtime:      string(function.Runtime),
+                Memory:       memory,
+                Timeout:      timeout,
+                LastUpdate:   aws.ToString(function.LastModified),
+                Role:         aws.ToString(function.Role),
+                Handler:      aws.ToString(function.Handler),
+                Description:  aws.ToString(function.Description),
+                FunctionArn:  aws.ToString(function.FunctionArn),
+                CodeSize:     function.CodeSize,
+                Version:      aws.ToString(function.Version),
+                PackageType:  string(function.PackageType),
+                Architecture: architecture,
+                LogGroup:     logGroup,
+            })
+        }
+
+        if output.NextMarker == nil {
+            break
+        }
+        marker = output.NextMarker
+    }
+
+    return functions, nil
 }
 
-// Get pipeline status directly from the provider
-ctx := context.Background()
-pipelines, err := provider.GetStatus(ctx)
-if err != nil {
-    return model.ErrMsg{Err: err}
-}
-
-// Execute the pipeline
-ctx := context.Background()
-err = provider.StartPipeline(ctx, m.SelectedPipeline.Name, m.CommitID)
-if err != nil {
-    return model.PipelineExecutionMsg{Err: err}
+func (p *Provider) GetFunctionStatusOperation() (providers.FunctionStatusOperation, error) {
+    if !p.IsAuthenticated() {
+        return nil, fmt.Errorf("provider not authenticated")
+    }
+    return &functionStatusOperation{provider: p}, nil
 }
 ```
 
 ## Conclusion
 
-The model architecture provides a flexible and extensible foundation for CloudGate, allowing for easy addition of new cloud providers and services. The backward compatibility layer ensures that existing code continues to work while new features are added.
-
-The direct provider interaction pattern simplifies the code and makes it more maintainable by removing the need for complex reflection-based type conversions and intermediate layers. This approach also makes it easier to add new cloud providers in the future.
+The model architecture provides a flexible and maintainable foundation for cloudgate. By clearly separating concerns and using interfaces, we've created a system that can easily support multiple cloud providers and services. The recent addition of Lambda Function Status demonstrates how the architecture can be extended to support new services.

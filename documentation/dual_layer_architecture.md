@@ -2,7 +2,7 @@
 
 ## Overview
 
-CloudGate implements a dual-layer architecture pattern to provide a clean separation between cloud provider implementations and the application's business logic. This document describes this architecture, its benefits, and how to extend it when adding new cloud providers or services.
+cloudgate implements a dual-layer architecture pattern to provide a clean separation between cloud provider implementations and the application's business logic. This document describes this architecture, its benefits, and how to extend it when adding new cloud providers or services.
 
 ## Architecture Layers
 
@@ -41,6 +41,7 @@ Key components:
 - `providers.Operation` - Interface for adapted service operations
 - `providers.ApprovalAction` - Type for pipeline approval actions
 - `providers.PipelineStatus` - Type for pipeline status information
+- `providers.FunctionStatus` - Type for Lambda function status information
 
 ## Enhanced Provider Interface
 
@@ -71,6 +72,13 @@ type Provider interface {
     ApproveAction(ctx context.Context, action ApprovalAction, approved bool, comment string) error
     GetStatus(ctx context.Context) ([]PipelineStatus, error)
     StartPipeline(ctx context.Context, pipelineName string, commitID string) error
+    GetFunctionStatus(ctx context.Context) ([]FunctionStatus, error)
+    
+    // UI Operation interfaces
+    GetCodePipelineManualApprovalOperation() (CodePipelineManualApprovalOperation, error)
+    GetPipelineStatusOperation() (PipelineStatusOperation, error)
+    GetStartPipelineOperation() (StartPipelineOperation, error)
+    GetFunctionStatusOperation() (FunctionStatusOperation, error)
 }
 ```
 
@@ -156,6 +164,65 @@ func (p *Provider) GetApprovals(ctx context.Context) ([]providers.ApprovalAction
 
     return providerApprovals, nil
 }
+
+// GetFunctionStatus returns the status of all Lambda functions
+func (p *Provider) GetFunctionStatus(ctx context.Context) ([]providers.FunctionStatus, error) {
+    if !p.IsAuthenticated() {
+        return nil, fmt.Errorf("provider not authenticated")
+    }
+
+    // Load AWS config
+    cfg, err := config.LoadDefaultConfig(ctx,
+        config.WithSharedConfigProfile(p.profile),
+        config.WithRegion(p.region),
+    )
+    if err != nil {
+        return nil, fmt.Errorf("failed to load AWS config: %w", err)
+    }
+
+    client := lambda.NewFromConfig(cfg)
+
+    // List all functions
+    var functions []providers.FunctionStatus
+    var marker *string
+
+    for {
+        output, err := client.ListFunctions(ctx, &lambda.ListFunctionsInput{
+            Marker: marker,
+        })
+        if err != nil {
+            return nil, fmt.Errorf("failed to list functions: %w", err)
+        }
+
+        // Convert Lambda functions to FunctionStatus
+        for _, function := range output.Functions {
+            // ... conversion logic ...
+            functions = append(functions, providers.FunctionStatus{
+                Name:         aws.ToString(function.FunctionName),
+                Runtime:      string(function.Runtime),
+                Memory:       memory,
+                Timeout:      timeout,
+                LastUpdate:   aws.ToString(function.LastModified),
+                Role:         aws.ToString(function.Role),
+                Handler:      aws.ToString(function.Handler),
+                Description:  aws.ToString(function.Description),
+                FunctionArn:  aws.ToString(function.FunctionArn),
+                CodeSize:     function.CodeSize,
+                Version:      aws.ToString(function.Version),
+                PackageType:  string(function.PackageType),
+                Architecture: architecture,
+                LogGroup:     logGroup,
+            })
+        }
+
+        if output.NextMarker == nil {
+            break
+        }
+        marker = output.NextMarker
+    }
+
+    return functions, nil
+}
 ```
 
 ## Flow of Execution
@@ -193,6 +260,12 @@ func (p *Provider) GetApprovals(ctx context.Context) ([]providers.ApprovalAction
 1. Create a new type in the category package
 2. Implement the `cloud.Operation` interface
 3. Register the operation with the category
+
+### Adding a New UI Operation
+
+1. Define a new interface in `internal/providers/ui_operations.go`
+2. Add a method to the `Provider` interface to get the operation
+3. Implement the operation in the provider package
 
 ## Benefits
 
@@ -237,6 +310,18 @@ func (p *Provider) GetStatus(ctx context.Context) ([]providers.PipelineStatus, e
 func (p *Provider) StartPipeline(ctx context.Context, pipelineName string, commitID string) error {
     // Implementation details...
 }
+
+func (p *Provider) GetFunctionStatus(ctx context.Context) ([]providers.FunctionStatus, error) {
+    // Implementation details...
+}
+
+// UI Operation implementations
+func (p *Provider) GetFunctionStatusOperation() (providers.FunctionStatusOperation, error) {
+    if !p.IsAuthenticated() {
+        return nil, fmt.Errorf("provider not authenticated")
+    }
+    return &functionStatusOperation{provider: p}, nil
+}
 ```
 
 ## Best Practices
@@ -248,7 +333,8 @@ func (p *Provider) StartPipeline(ctx context.Context, pipelineName string, commi
 5. **Complete Implementation**: Ensure all methods are properly implemented in both layers
 6. **Direct Implementation**: Implement cloud-specific operations directly in the provider
 7. **Avoid Import Cycles**: Use factory patterns to avoid import cycles
+8. **UI Operation Interfaces**: Use specialized interfaces for UI operations
 
 ## Conclusion
 
-The dual-layer architecture provides a robust foundation for CloudGate, allowing for clean separation of concerns and easy extension to support multiple cloud providers. By following this pattern, we ensure that the codebase remains maintainable and scalable as we add more functionality. The direct implementation of cloud-specific operations in the provider layer simplifies the code and makes it more maintainable. 
+The dual-layer architecture provides a robust foundation for cloudgate, allowing for clean separation of concerns and easy extension to support multiple cloud providers. By following this pattern, we ensure that the codebase remains maintainable and scalable as we add more functionality. The direct implementation of cloud-specific operations in the provider layer simplifies the code and makes it more maintainable. The addition of specialized UI operation interfaces further enhances the architecture by providing a clear separation between UI operations and their implementations. 

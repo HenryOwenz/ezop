@@ -1,6 +1,6 @@
-# CloudGate Documentation
+# cloudgate Documentation
 
-This directory contains documentation for the CloudGate project, including architecture, design patterns, and usage guides.
+This directory contains documentation for the cloudgate project, including architecture, design patterns, and usage guides.
 
 ## Available Documentation
 

@@ -2,11 +2,11 @@
 
 ## Overview
 
-This document describes the UI visibility pattern implemented in CloudGate to control which components (categories and operations) are visible in the user interface. This pattern allows for a clear separation between components that should be exposed to users and internal components that should only be accessible programmatically.
+This document describes the UI visibility pattern implemented in cloudgate to control which components (categories and operations) are visible in the user interface. This pattern allows for a clear separation between components that should be exposed to users and internal components that should only be accessible programmatically.
 
 ## Problem Statement
 
-As CloudGate scales to support hundreds of cloud services and operations, we need a consistent way to:
+As cloudgate scales to support hundreds of cloud services and operations, we need a consistent way to:
 
 1. Hide internal operations that should not be directly accessible by users
 2. Maintain programmatic access to these operations for internal use
@@ -159,4 +159,4 @@ service.categories = append(service.categories, internalCategory)
 
 ## Conclusion
 
-The UI visibility pattern provides a clean and consistent way to control which components are visible in the CloudGate user interface. By implementing this pattern at both the category and operation levels, we ensure that users have a focused experience while maintaining the flexibility to use operations programmatically when needed. 
+The UI visibility pattern provides a clean and consistent way to control which components are visible in the cloudgate user interface. By implementing this pattern at both the category and operation levels, we ensure that users have a focused experience while maintaining the flexibility to use operations programmatically when needed. 

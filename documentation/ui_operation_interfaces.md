@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the UI operation interfaces implemented in CloudGate to provide a clearer separation between UI operations and their provider-specific implementations. This architecture addresses terminology issues and creates a more flexible structure for supporting multiple cloud providers.
+This document describes the UI operation interfaces implemented in cloudgate to provide a clearer separation between UI operations and their provider-specific implementations. This architecture addresses terminology issues and creates a more flexible structure for supporting multiple cloud providers.
 
 ## Problem Statement
 
@@ -28,7 +28,8 @@ We implemented a new architecture with dedicated interfaces for UI operations:
 UIOperation
 ├── CodePipelineManualApprovalOperation
 ├── PipelineStatusOperation
-└── StartPipelineOperation
+├── StartPipelineOperation
+└── FunctionStatusOperation
 ```
 
 ### UIOperation Interface
@@ -76,6 +77,13 @@ type StartPipelineOperation interface {
     // StartPipelineExecution starts a pipeline execution
     StartPipelineExecution(ctx context.Context, pipelineName string, commitID string) error
 }
+
+type FunctionStatusOperation interface {
+    UIOperation
+    
+    // GetFunctionStatus returns the status of all Lambda functions
+    GetFunctionStatus(ctx context.Context) ([]FunctionStatus, error)
+}
 ```
 
 ### Provider Interface Extensions
@@ -94,6 +102,9 @@ type Provider interface {
     
     // GetStartPipelineOperation returns the start pipeline operation
     GetStartPipelineOperation() (StartPipelineOperation, error)
+    
+    // GetFunctionStatusOperation returns the function status operation
+    GetFunctionStatusOperation() (FunctionStatusOperation, error)
 }
 ```
 
@@ -129,6 +140,32 @@ func (o *codePipelineManualApprovalOperation) ApproveAction(ctx context.Context,
 }
 ```
 
+### Lambda Function Status Operation
+
+The Lambda Function Status operation is implemented similarly:
+
+```go
+type functionStatusOperation struct {
+    provider *Provider
+}
+
+func (o *functionStatusOperation) Name() string {
+    return "Function Status"
+}
+
+func (o *functionStatusOperation) Description() string {
+    return "View Lambda Function Status"
+}
+
+func (o *functionStatusOperation) IsUIVisible() bool {
+    return true
+}
+
+func (o *functionStatusOperation) GetFunctionStatus(ctx context.Context) ([]providers.FunctionStatus, error) {
+    return o.provider.GetFunctionStatus(ctx)
+}
+```
+
 ### UI Code Updates
 
 The UI code has been updated to use the new operation interfaces:
@@ -146,11 +183,23 @@ approvals, err := approvalOperation.GetPendingApprovals(ctx)
 if err != nil {
     return model.ErrMsg{Err: err}
 }
+
+// Similarly for Lambda Function Status
+functionStatusOperation, err := provider.GetFunctionStatusOperation()
+if err != nil {
+    return model.ErrMsg{Err: err}
+}
+
+// Get function status using the operation
+functions, err := functionStatusOperation.GetFunctionStatus(ctx)
+if err != nil {
+    return model.ErrMsg{Err: err}
+}
 ```
 
 ## Benefits
 
-1. **Clear Terminology**: The new interfaces use more specific names like `CodePipelineManualApprovalOperation`.
+1. **Clear Terminology**: The new interfaces use more specific names like `CodePipelineManualApprovalOperation` and `FunctionStatusOperation`.
 2. **Separation of Concerns**: UI operations are clearly separated from their implementations.
 3. **Provider-Specific Implementations**: Each provider can implement operations in its own way.
 4. **Flexibility**: Adding new providers or operations is easier with the new architecture.
@@ -162,7 +211,8 @@ if err != nil {
 2. **Operation Discovery**: Add mechanisms for dynamically discovering available operations.
 3. **Operation Parameters**: Standardize parameter passing for operations.
 4. **Operation Results**: Create standardized result types for operations.
+5. **Additional AWS Services**: Expand the operation interfaces to cover more AWS services like S3, EC2, etc.
 
 ## Conclusion
 
-The new UI operation interfaces provide a more flexible and maintainable architecture for CloudGate. By clearly separating UI operations from their implementations, we've addressed terminology issues and created a foundation for supporting multiple cloud providers. 
+The UI operation interfaces provide a flexible and maintainable architecture for cloudgate. By clearly separating UI operations from their implementations, we've addressed terminology issues and created a foundation for supporting multiple cloud providers and services. The recent addition of the Lambda Function Status operation demonstrates how easily the architecture can be extended to support new services. 
