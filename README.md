@@ -25,7 +25,9 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 [![Dependabot Status](https://img.shields.io/badge/Dependabot-enabled-brightgreen.svg)](https://github.com/HenryOwenz/cloudgate/blob/main/.github/dependabot.yml)
 [![Go ReportCard](https://goreportcard.com/badge/HenryOwenz/cloudgate)](https://goreportcard.com/report/HenryOwenz/cloudgate)
 
-![Cloudgate Demo](https://github.com/HenryOwenz/cloudgate/releases/download/v0.1.3/cloudgate-demo.gif)
+<p align="center">
+  <img src="https://github.com/HenryOwenz/cloudgate/releases/download/v0.1.3/cloudgate-demo.gif" width="100%" alt="cloudgate Demo">
+</p>
 
 ## Features 
 
