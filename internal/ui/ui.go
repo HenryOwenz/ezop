@@ -67,6 +67,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		update.HandlePipelineExecution(newModel.core, msg.Err)
 		view.UpdateTableForView(newModel.core)
 		return newModel, nil
+	case model.FunctionStatusMsg:
+		newModel := m.Clone()
+		newModel.core.Functions = msg.Functions
+		newModel.core.Provider = msg.Provider
+		newModel.core.CurrentView = constants.ViewFunctionStatus
+		newModel.core.IsLoading = false
+		view.UpdateTableForView(newModel.core)
+		return newModel, nil
 	case spinner.TickMsg:
 		newModel := m.Clone()
 		var cmd tea.Cmd
@@ -133,18 +141,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			newModel.core.Table.MoveDown(1)
 			return newModel, nil
 		case constants.KeyTab:
-			// Tab is now only used for other views, not AWS config
-			if m.core.CurrentView == constants.ViewSummary {
-				newModel := m.Clone()
-				if newModel.core.ManualInput {
-					newModel.core.ManualInput = false
-					newModel.core.ResetTextInput()
-				} else {
-					newModel.core.ManualInput = true
-					newModel.core.TextInput.Focus()
-				}
-				return newModel, nil
-			}
+			// Tab key is no longer used
 			return m, nil
 		default:
 			if m.core.ManualInput {

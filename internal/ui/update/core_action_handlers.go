@@ -3,6 +3,7 @@ package update
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
@@ -24,6 +25,10 @@ func UpdateModelForView(m *model.Model) error {
 			if err != nil {
 				return err
 			}
+
+			// Sort the profiles alphabetically
+			sort.Strings(profiles)
+
 			m.Profiles = profiles
 		} else {
 			m.Regions = constants.DefaultAWSRegions

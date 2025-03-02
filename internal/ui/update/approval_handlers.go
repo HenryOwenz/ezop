@@ -19,6 +19,13 @@ func HandleApprovalResult(m *model.Model, err error) {
 		return
 	}
 
+	// Check if SelectedApproval is nil before accessing its fields
+	if m.SelectedApproval == nil {
+		m.Error = constants.MsgErrorNoApproval
+		m.CurrentView = constants.ViewError
+		return
+	}
+
 	// Use the appropriate message constant based on approval action
 	if m.ApproveAction {
 		m.Success = fmt.Sprintf(constants.MsgApprovalSuccess,

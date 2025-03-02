@@ -42,3 +42,29 @@ type StartPipelineOperation interface {
 	// StartPipelineExecution starts a pipeline execution
 	StartPipelineExecution(ctx context.Context, pipelineName string, commitID string) error
 }
+
+// FunctionStatusOperation represents an operation to view Lambda function status
+type FunctionStatusOperation interface {
+	UIOperation
+
+	// GetFunctionStatus returns the status of all Lambda functions
+	GetFunctionStatus(ctx context.Context) ([]FunctionStatus, error)
+}
+
+// FunctionStatus represents the status of a Lambda function
+type FunctionStatus struct {
+	Name         string
+	Runtime      string
+	Memory       int32
+	Timeout      int32
+	LastUpdate   string
+	Role         string
+	Handler      string
+	Description  string
+	FunctionArn  string
+	CodeSize     int64
+	Version      string
+	PackageType  string
+	Architecture string
+	LogGroup     string
+}

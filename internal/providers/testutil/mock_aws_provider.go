@@ -24,6 +24,17 @@ func NewMockAWSProvider() providers.Provider {
 	}
 }
 
+// NewMockAWSProviderWithProfiles creates a new mock AWS provider with custom profiles
+func NewMockAWSProviderWithProfiles(profiles []string) providers.Provider {
+	return &MockAWSProvider{
+		profiles: profiles,
+		regions:  []string{"us-east-1", "us-west-2", "eu-west-1"},
+		services: []providers.Service{
+			NewMockCodePipelineService(),
+		},
+	}
+}
+
 // Name returns the name of the provider
 func (p *MockAWSProvider) Name() string {
 	return "AWS"
@@ -142,6 +153,11 @@ func (p *MockAWSProvider) GetPipelineStatusOperation() (providers.PipelineStatus
 // GetStartPipelineOperation returns the start pipeline operation
 func (p *MockAWSProvider) GetStartPipelineOperation() (providers.StartPipelineOperation, error) {
 	return &MockStartPipelineOperation{}, nil
+}
+
+// GetFunctionStatusOperation returns the function status operation
+func (p *MockAWSProvider) GetFunctionStatusOperation() (providers.FunctionStatusOperation, error) {
+	return &MockFunctionStatusOperation{}, nil
 }
 
 // MockCodePipelineService is a mock implementation of the CodePipeline service
@@ -321,4 +337,35 @@ func (o *MockStartPipelineOperation) IsUIVisible() bool {
 // StartPipelineExecution starts a pipeline execution
 func (o *MockStartPipelineOperation) StartPipelineExecution(ctx context.Context, pipelineName, commitID string) error {
 	return nil
+}
+
+// MockFunctionStatusOperation is a mock implementation of the FunctionStatusOperation interface
+type MockFunctionStatusOperation struct{}
+
+// Name returns the name of the operation
+func (o *MockFunctionStatusOperation) Name() string {
+	return "Function Status"
+}
+
+// Description returns the description of the operation
+func (o *MockFunctionStatusOperation) Description() string {
+	return "View Lambda function status"
+}
+
+// IsUIVisible returns whether this operation should be visible in the UI
+func (o *MockFunctionStatusOperation) IsUIVisible() bool {
+	return true
+}
+
+// GetFunctionStatus returns mock function status data
+func (o *MockFunctionStatusOperation) GetFunctionStatus(ctx context.Context) ([]providers.FunctionStatus, error) {
+	return []providers.FunctionStatus{
+		{
+			Name:       "test-function",
+			Runtime:    "nodejs14.x",
+			Memory:     128,
+			Timeout:    30,
+			LastUpdate: "2023-01-01",
+		},
+	}, nil
 }

@@ -8,6 +8,7 @@ const (
 	// Loading messages
 	MsgLoadingApprovals  = "Loading approvals..."
 	MsgLoadingPipelines  = "Loading pipelines..."
+	MsgLoadingFunctions  = "Loading functions..."
 	MsgStartingPipeline  = "Starting pipeline..."
 	MsgExecutingApproval = "Executing approval action..."
 
@@ -28,6 +29,7 @@ const (
 	MsgErrorGeneric       = "Error: %s"
 	MsgErrorNoApproval    = "No approval selected"
 	MsgErrorNoPipeline    = "No pipeline selected"
+	MsgErrorNoFunction    = "No function selected"
 	MsgErrorEmptyCommitID = "Commit ID cannot be empty"
 	MsgErrorEmptyComment  = "Comment cannot be empty"
 )

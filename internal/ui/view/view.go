@@ -106,6 +106,10 @@ func getContextText(m *model.Model) string {
 		return getPipelineStatusContextText(m)
 	case constants.ViewPipelineStages:
 		return getPipelineStagesContextText(m)
+	case constants.ViewFunctionStatus:
+		return getFunctionStatusContextText(m)
+	case constants.ViewFunctionDetails:
+		return getFunctionDetailsContextText(m)
 	default:
 		return ""
 	}
@@ -191,10 +195,17 @@ func getExecutingActionContextText(m *model.Model) string {
 		if m.SelectedPipeline == nil {
 			return ""
 		}
-		return fmt.Sprintf("Profile: %s\nRegion: %s\nPipeline: %s\nRevisionID: Latest commit",
+
+		revisionID := "Latest commit"
+		if m.ManualCommitID && m.CommitID != "" {
+			revisionID = m.CommitID
+		}
+
+		return fmt.Sprintf("Profile: %s\nRegion: %s\nPipeline: %s\nRevisionID: %s",
 			m.AwsProfile,
 			m.AwsRegion,
-			m.SelectedPipeline.Name)
+			m.SelectedPipeline.Name,
+			revisionID)
 	}
 	if m.SelectedApproval == nil {
 		return ""
@@ -224,6 +235,21 @@ func getPipelineStagesContextText(m *model.Model) string {
 		m.SelectedPipeline.Name)
 }
 
+// getFunctionStatusContextText returns the context text for the function status view
+func getFunctionStatusContextText(m *model.Model) string {
+	return fmt.Sprintf("Service: %s\nCategory: %s",
+		m.SelectedService.Name,
+		m.SelectedCategory.Name)
+}
+
+// getFunctionDetailsContextText returns the context text for the function details view
+func getFunctionDetailsContextText(m *model.Model) string {
+	if m.SelectedFunction == nil {
+		return ""
+	}
+	return fmt.Sprintf("Function: %s", m.SelectedFunction.Name)
+}
+
 // getTitleText returns the appropriate title for the current view
 func getTitleText(m *model.Model) string {
 	// Map of view types to their corresponding titles
@@ -241,6 +267,8 @@ func getTitleText(m *model.Model) string {
 		constants.ViewError:           constants.TitleError,
 		constants.ViewSuccess:         constants.TitleSuccess,
 		constants.ViewHelp:            constants.TitleHelp,
+		constants.ViewFunctionStatus:  constants.TitleFunctionStatus,
+		constants.ViewFunctionDetails: constants.TitleFunctionDetails,
 	}
 
 	// Special case for AWS config view
@@ -264,7 +292,7 @@ func getHelpText(m *model.Model) string {
 	const (
 		defaultHelpText     = "↑/↓: navigate • %s: select • %s: back • %s: quit"
 		manualInputHelpText = "%s: confirm • %s: cancel • %s: quit"
-		summaryHelpText     = "↑/↓: navigate • %s: select • %s: toggle input • %s: back • %s: quit"
+		summaryHelpText     = "↑/↓: navigate • %s: select • %s: back • %s: quit"
 		providersHelpText   = "↑/↓: navigate • %s: select • %s: quit"
 	)
 
@@ -277,7 +305,7 @@ func getHelpText(m *model.Model) string {
 	case m.CurrentView == constants.ViewSummary && m.ManualInput:
 		return fmt.Sprintf(manualInputHelpText, constants.KeyEnter, constants.KeyEsc, constants.KeyCtrlC)
 	case m.CurrentView == constants.ViewSummary:
-		return fmt.Sprintf(summaryHelpText, constants.KeyEnter, constants.KeyTab, constants.KeyEsc, constants.KeyQ)
+		return fmt.Sprintf(summaryHelpText, constants.KeyEnter, constants.KeyEsc, constants.KeyQ)
 	default:
 		return fmt.Sprintf(defaultHelpText, constants.KeyEnter, constants.KeyEsc, constants.KeyQ)
 	}

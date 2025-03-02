@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
-	"github.com/aws/aws-sdk-go-v2/service/codepipeline/types"
+	cpTypes "github.com/aws/aws-sdk-go-v2/service/codepipeline/types"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
 )
 
 // ApprovalAction represents a pending approval in a pipeline.
@@ -80,7 +82,7 @@ func (p *Provider) GetPendingApprovals(ctx context.Context) ([]ApprovalAction, e
 }
 
 // findPendingApprovals returns a list of pending approval actions from the given stages and their states.
-func findPendingApprovals(pipelineName string, stages []types.StageDeclaration, stageStates []types.StageState) []ApprovalAction {
+func findPendingApprovals(pipelineName string, stages []cpTypes.StageDeclaration, stageStates []cpTypes.StageState) []ApprovalAction {
 	var approvals []ApprovalAction
 	actionTypes := buildActionTypeMap(stages)
 	stateMap := buildStageStateMap(stageStates)
@@ -95,8 +97,8 @@ func findPendingApprovals(pipelineName string, stages []types.StageDeclaration, 
 }
 
 // buildActionTypeMap creates a map of action names to their categories for quick lookup.
-func buildActionTypeMap(stages []types.StageDeclaration) map[string]types.ActionCategory {
-	actionTypes := make(map[string]types.ActionCategory)
+func buildActionTypeMap(stages []cpTypes.StageDeclaration) map[string]cpTypes.ActionCategory {
+	actionTypes := make(map[string]cpTypes.ActionCategory)
 	for _, stage := range stages {
 		for _, action := range stage.Actions {
 			actionTypes[*action.Name] = action.ActionTypeId.Category
@@ -107,8 +109,8 @@ func buildActionTypeMap(stages []types.StageDeclaration) map[string]types.Action
 }
 
 // buildStageStateMap creates a map of stage names to their states for quick lookup.
-func buildStageStateMap(stageStates []types.StageState) map[string]types.StageState {
-	stateMap := make(map[string]types.StageState)
+func buildStageStateMap(stageStates []cpTypes.StageState) map[string]cpTypes.StageState {
+	stateMap := make(map[string]cpTypes.StageState)
 	for _, state := range stageStates {
 		stateMap[*state.StageName] = state
 	}
@@ -117,7 +119,7 @@ func buildStageStateMap(stageStates []types.StageState) map[string]types.StageSt
 }
 
 // findStageApprovals returns a list of pending approval actions from a single stage.
-func findStageApprovals(pipelineName string, stage types.StageDeclaration, state types.StageState, actionTypes map[string]types.ActionCategory) []ApprovalAction {
+func findStageApprovals(pipelineName string, stage cpTypes.StageDeclaration, state cpTypes.StageState, actionTypes map[string]cpTypes.ActionCategory) []ApprovalAction {
 	var approvals []ApprovalAction
 	for _, actionState := range state.ActionStates {
 		if isApprovalAction(actionState, actionTypes) {
@@ -135,11 +137,11 @@ func findStageApprovals(pipelineName string, stage types.StageDeclaration, state
 }
 
 // isApprovalAction checks if the given action state represents a pending manual approval.
-func isApprovalAction(actionState types.ActionState, actionTypes map[string]types.ActionCategory) bool {
+func isApprovalAction(actionState cpTypes.ActionState, actionTypes map[string]cpTypes.ActionCategory) bool {
 	return actionState.LatestExecution != nil &&
 		actionState.LatestExecution.Token != nil &&
-		actionState.LatestExecution.Status == types.ActionExecutionStatusInProgress &&
-		actionTypes[*actionState.ActionName] == types.ActionCategoryApproval
+		actionState.LatestExecution.Status == cpTypes.ActionExecutionStatusInProgress &&
+		actionTypes[*actionState.ActionName] == cpTypes.ActionCategoryApproval
 }
 
 // PutApprovalResult handles the approval or rejection of a manual approval action.
@@ -155,15 +157,15 @@ func (p *Provider) PutApprovalResult(ctx context.Context, action ApprovalAction,
 
 	client := codepipeline.NewFromConfig(cfg)
 
-	status := types.ApprovalStatusApproved
+	status := cpTypes.ApprovalStatusApproved
 	if !approved {
-		status = types.ApprovalStatusRejected
+		status = cpTypes.ApprovalStatusRejected
 	}
 
 	_, err = client.PutApprovalResult(ctx, &codepipeline.PutApprovalResultInput{
 		ActionName:   aws.String(action.ActionName),
 		PipelineName: aws.String(action.PipelineName),
-		Result: &types.ApprovalResult{
+		Result: &cpTypes.ApprovalResult{
 			Status:  status,
 			Summary: aws.String(comment),
 		},
@@ -211,7 +213,7 @@ func (p *Provider) GetPipelineStatus(ctx context.Context) ([]PipelineStatus, err
 }
 
 // getPipelineStatus returns the status of a single pipeline
-func getPipelineStatus(ctx context.Context, client *codepipeline.Client, pipeline types.PipelineSummary) (PipelineStatus, error) {
+func getPipelineStatus(ctx context.Context, client *codepipeline.Client, pipeline cpTypes.PipelineSummary) (PipelineStatus, error) {
 	stateOutput, err := client.GetPipelineState(ctx, &codepipeline.GetPipelineStateInput{
 		Name: pipeline.Name,
 	})
@@ -273,10 +275,10 @@ func (p *Provider) StartPipelineExecution(ctx context.Context, pipelineName stri
 
 	// Only add source revision if a specific commitID is provided
 	if commitID != "" {
-		input.SourceRevisions = []types.SourceRevisionOverride{
+		input.SourceRevisions = []cpTypes.SourceRevisionOverride{
 			{
 				ActionName:    aws.String("Source"), // Assuming standard Source action name
-				RevisionType:  types.SourceRevisionTypeCommitId,
+				RevisionType:  cpTypes.SourceRevisionTypeCommitId,
 				RevisionValue: aws.String(commitID),
 			},
 		}
@@ -288,4 +290,80 @@ func (p *Provider) StartPipelineExecution(ctx context.Context, pipelineName stri
 	}
 
 	return nil
+}
+
+// GetFunctionStatus returns the status of all Lambda functions
+func (p *Provider) GetFunctionStatus(ctx context.Context) ([]providers.FunctionStatus, error) {
+	// Create a new AWS SDK client
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithSharedConfigProfile(p.profile),
+		config.WithRegion(p.region),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	client := lambda.NewFromConfig(cfg)
+
+	// List all functions
+	var functions []providers.FunctionStatus
+	var marker *string
+
+	for {
+		output, err := client.ListFunctions(ctx, &lambda.ListFunctionsInput{
+			Marker: marker,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list functions: %w", err)
+		}
+
+		// Convert Lambda functions to FunctionStatus
+		for _, function := range output.Functions {
+			memory := int32(0)
+			if function.MemorySize != nil {
+				memory = *function.MemorySize
+			}
+
+			timeout := int32(0)
+			if function.Timeout != nil {
+				timeout = *function.Timeout
+			}
+
+			// Get architecture (default to x86_64 if not specified)
+			architecture := "x86_64"
+			if len(function.Architectures) > 0 {
+				architecture = string(function.Architectures[0])
+			}
+
+			// Get log group if available
+			logGroup := ""
+			if function.LoggingConfig != nil && function.LoggingConfig.LogGroup != nil {
+				logGroup = *function.LoggingConfig.LogGroup
+			}
+
+			functions = append(functions, providers.FunctionStatus{
+				Name:         aws.ToString(function.FunctionName),
+				Runtime:      string(function.Runtime),
+				Memory:       memory,
+				Timeout:      timeout,
+				LastUpdate:   aws.ToString(function.LastModified),
+				Role:         aws.ToString(function.Role),
+				Handler:      aws.ToString(function.Handler),
+				Description:  aws.ToString(function.Description),
+				FunctionArn:  aws.ToString(function.FunctionArn),
+				CodeSize:     function.CodeSize,
+				Version:      aws.ToString(function.Version),
+				PackageType:  string(function.PackageType),
+				Architecture: architecture,
+				LogGroup:     logGroup,
+			})
+		}
+
+		if output.NextMarker == nil {
+			break
+		}
+		marker = output.NextMarker
+	}
+
+	return functions, nil
 }

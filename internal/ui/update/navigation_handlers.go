@@ -1,10 +1,8 @@
 package update
 
 import (
-	"fmt"
-	"strings"
+	"sort"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
@@ -73,14 +71,31 @@ func NavigateBack(m *model.Model) *model.Model {
 		newModel.CurrentView = constants.ViewApprovals
 		newModel.SelectedApproval = nil
 	case constants.ViewSummary:
-		newModel.CurrentView = constants.ViewConfirmation
+		// For pipeline start flow, go back to pipeline status view
+		if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
+			newModel.CurrentView = constants.ViewPipelineStatus
+		} else {
+			// For approval flow, go back to confirmation view
+			newModel.CurrentView = constants.ViewConfirmation
+		}
 		newModel.Summary = ""
 		newModel.ResetTextInput()
 	case constants.ViewExecutingAction:
 		if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
-			// For pipeline start flow, go back to pipeline selection
+			// For pipeline start flow, go back to pipeline status view
 			newModel.CurrentView = constants.ViewPipelineStatus
-			newModel.SelectedPipeline = nil
+
+			// Make sure we're showing the pipeline selection table, not the approval table
+			// This ensures we stay in the pipeline start flow, not the approval flow
+			if newModel.SelectedPipeline != nil {
+				// Reset any approval-related state that might be present
+				newModel.SelectedApproval = nil
+				newModel.ApproveAction = false
+				newModel.ApprovalComment = ""
+
+				// Make sure we're in the correct view with the right table
+				view.UpdateTableForView(newModel)
+			}
 		} else {
 			// For approval flow, go back to summary
 			newModel.CurrentView = constants.ViewSummary
@@ -100,269 +115,59 @@ func NavigateBack(m *model.Model) *model.Model {
 		newModel.CurrentView = constants.ViewSelectOperation
 		newModel.Pipelines = nil
 		newModel.Provider = nil
+	case constants.ViewFunctionStatus:
+		newModel.CurrentView = constants.ViewSelectOperation
+		newModel.Functions = nil
+		newModel.Provider = nil
+	case constants.ViewFunctionDetails:
+		newModel.CurrentView = constants.ViewFunctionStatus
+		newModel.SetSelectedFunction(nil)
 	}
 	return newModel
 }
 
-// HandleEnter processes the enter key press based on the current view
-func HandleEnter(m *model.Model) (tea.Model, tea.Cmd) {
-	// Special handling for manual input in different views
-	if m.ManualInput {
-		newModel := m.Clone()
-		value := strings.TrimSpace(m.TextInput.Value())
-
-		if value == "" {
-			// If empty, just exit manual input mode
-			newModel.ManualInput = false
-			newModel.ResetTextInput()
-			view.UpdateTableForView(newModel)
-			return WrapModel(newModel), nil
-		}
-
-		// Handle manual input based on the current view
-		switch m.CurrentView {
-		case constants.ViewAuthConfig:
-			// Set auth config value
-			newModel.SetAuthConfig(m.ProviderState.AuthState.CurrentAuthConfigKey, value)
-			newModel.ManualInput = false
-			newModel.ResetTextInput()
-
-			// Get the provider
-			provider, err := m.Registry.Get(m.ProviderState.ProviderName)
-			if err != nil {
-				return WrapModel(newModel), func() tea.Msg {
-					return model.ErrMsg{Err: err}
-				}
-			}
-
-			// Get the next auth config key
-			authConfigKeys := provider.GetAuthConfigKeys(m.ProviderState.AuthState.Method)
-			currentKeyIndex := -1
-			for i, key := range authConfigKeys {
-				if key == m.ProviderState.AuthState.CurrentAuthConfigKey {
-					currentKeyIndex = i
-					break
-				}
-			}
-
-			// If there are more auth config keys, show the next one
-			if currentKeyIndex < len(authConfigKeys)-1 {
-				nextKey := authConfigKeys[currentKeyIndex+1]
-				newModel.ProviderState.AuthState.CurrentAuthConfigKey = nextKey
-
-				// Get options for the next key
-				options, err := provider.GetConfigOptions(nextKey)
-				if err == nil {
-					newModel.ProviderState.ConfigOptions[nextKey] = options
-				}
-
-				view.UpdateTableForView(newModel)
-				return WrapModel(newModel), nil
-			}
-
-			// If all auth config keys are set, authenticate
-			err = provider.Authenticate(newModel.ProviderState.AuthState.Method, newModel.ProviderState.AuthState.AuthConfig)
-			if err != nil {
-				newModel.ProviderState.AuthState.AuthError = err.Error()
-				newModel.CurrentView = constants.ViewAuthError
-			} else {
-				newModel.ProviderState.AuthState.IsAuthenticated = true
-
-				// Move to provider configuration
-				configKeys := provider.GetConfigKeys()
-				if len(configKeys) > 0 {
-					firstKey := configKeys[0]
-					options, err := provider.GetConfigOptions(firstKey)
-					if err == nil {
-						newModel.ProviderState.ConfigOptions[firstKey] = options
-					}
-
-					newModel.ProviderState.CurrentConfigKey = firstKey
-					newModel.CurrentView = constants.ViewProviderConfig
-				} else {
-					newModel.CurrentView = constants.ViewSelectService
-				}
-			}
-
-			view.UpdateTableForView(newModel)
-			return WrapModel(newModel), nil
-
-		case constants.ViewProviderConfig:
-			// Set provider config value
-			newModel.SetProviderConfig(m.ProviderState.CurrentConfigKey, value)
-			newModel.ManualInput = false
-			newModel.ResetTextInput()
-
-			// Get the provider
-			provider, err := m.Registry.Get(m.ProviderState.ProviderName)
-			if err != nil {
-				return WrapModel(newModel), func() tea.Msg {
-					return model.ErrMsg{Err: err}
-				}
-			}
-
-			// Get the next config key
-			configKeys := provider.GetConfigKeys()
-			currentKeyIndex := -1
-			for i, key := range configKeys {
-				if key == m.ProviderState.CurrentConfigKey {
-					currentKeyIndex = i
-					break
-				}
-			}
-
-			// If there are more config keys, show the next one
-			if currentKeyIndex < len(configKeys)-1 {
-				nextKey := configKeys[currentKeyIndex+1]
-				newModel.ProviderState.CurrentConfigKey = nextKey
-
-				// Get options for the next key
-				options, err := provider.GetConfigOptions(nextKey)
-				if err == nil {
-					newModel.ProviderState.ConfigOptions[nextKey] = options
-				}
-
-				view.UpdateTableForView(newModel)
-				return WrapModel(newModel), nil
-			}
-
-			// If all config keys are set, configure the provider
-			err = provider.Configure(newModel.ProviderState.Config)
-			if err != nil {
-				return WrapModel(newModel), func() tea.Msg {
-					return model.ErrMsg{Err: err}
-				}
-			}
-
-			// Move to service selection
-			newModel.CurrentView = constants.ViewSelectService
-			view.UpdateTableForView(newModel)
-			return WrapModel(newModel), nil
-
-		case constants.ViewAWSConfig:
-			// For backward compatibility
-			// Get the entered value
-			if m.GetAwsProfile() == "" {
-				// Setting profile
-				newModel.SetAwsProfile(value)
-				newModel.ManualInput = false
-				newModel.ResetTextInput()
-				view.UpdateTableForView(newModel)
-			} else {
-				// Setting region and moving to next view
-				newModel.SetAwsRegion(value)
-				newModel.ManualInput = false
-				newModel.ResetTextInput()
-
-				// Create the provider with the selected profile and region
-				_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.GetAwsProfile(), newModel.GetAwsRegion())
-				if err != nil {
-					return WrapModel(newModel), func() tea.Msg {
-						return model.ErrMsg{Err: err}
-					}
-				}
-
-				newModel.CurrentView = constants.ViewSelectService
-				view.UpdateTableForView(newModel)
-			}
-			return WrapModel(newModel), nil
-
-		case constants.ViewSummary:
-			// For backward compatibility
-			if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
-				newModel.CommitID = value
-				newModel.ManualCommitID = true
-			} else if m.SelectedApproval != nil {
-				newModel.ApprovalComment = value
-			}
-
-			newModel.ManualInput = false
-			newModel.CurrentView = constants.ViewExecutingAction
-			view.UpdateTableForView(newModel)
-			return WrapModel(newModel), nil
-		}
-	}
-
-	// Regular view handling
+// HandleTableSelect handles table row selection based on the current view
+func HandleTableSelect(m *model.Model) (tea.Model, tea.Cmd) {
 	switch m.CurrentView {
 	case constants.ViewProviders:
 		return HandleProviderSelection(m)
+	case constants.ViewAWSConfig:
+		return HandleAWSConfigSelection(m)
 	case constants.ViewAuthMethodSelect:
 		return HandleAuthMethodSelection(m)
 	case constants.ViewAuthConfig:
 		return HandleAuthConfigSelection(m)
 	case constants.ViewProviderConfig:
 		return HandleProviderConfigSelection(m)
-	case constants.ViewAWSConfig:
-		return HandleAWSConfigSelection(m)
 	case constants.ViewSelectService:
-		return HandleServiceSelection(m)
+		return SelectService(m)
 	case constants.ViewSelectCategory:
-		return HandleCategorySelection(m)
+		return SelectCategory(m)
 	case constants.ViewSelectOperation:
-		return HandleOperationSelection(m)
+		return SelectOperation(m)
 	case constants.ViewApprovals:
-		return HandleApprovalSelection(m)
+		return SelectApproval(m)
 	case constants.ViewConfirmation:
 		return HandleConfirmationSelection(m)
 	case constants.ViewSummary:
-		if !m.ManualInput {
-			if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
-				if selected := m.Table.SelectedRow(); len(selected) > 0 {
-					newModel := m.Clone()
-					switch selected[0] {
-					case "Latest Commit":
-						newModel.CurrentView = constants.ViewExecutingAction
-						newModel.Summary = "" // Empty string means use latest commit
-						view.UpdateTableForView(newModel)
-						return WrapModel(newModel), nil
-					case "Manual Input":
-						newModel.ManualInput = true
-						newModel.TextInput.Focus()
-						newModel.TextInput.Placeholder = constants.MsgEnterCommitID
-						return WrapModel(newModel), nil
-					}
-				}
-			}
-		}
 		return HandleSummaryConfirmation(m)
 	case constants.ViewExecutingAction:
 		return HandleExecutionSelection(m)
 	case constants.ViewPipelineStatus:
-		if selected := m.Table.SelectedRow(); len(selected) > 0 {
-			newModel := m.Clone()
-			for _, pipeline := range m.Pipelines {
-				if pipeline.Name == selected[0] {
-					if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
-						newModel.CurrentView = constants.ViewExecutingAction
-						newModel.SelectedPipeline = &pipeline
-						view.UpdateTableForView(newModel)
-						return WrapModel(newModel), nil
-					}
-					newModel.CurrentView = constants.ViewPipelineStages
-					newModel.SelectedPipeline = &pipeline
-					view.UpdateTableForView(newModel)
-					return WrapModel(newModel), nil
-				}
-			}
-		}
-	case constants.ViewPipelineStages:
-		// Just view only, no action
+		return HandlePipelineSelection(m)
+	case constants.ViewFunctionStatus:
+		return HandleFunctionSelection(m)
+	default:
+		return WrapModel(m), nil
 	}
-	return WrapModel(m), nil
 }
 
-// HandleProviderSelection handles the selection of a cloud provider
+// HandleProviderSelection handles the selection of a provider
 func HandleProviderSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		providerName := selected[0]
 
-		// Initialize providers if not already done
-		if len(m.Registry.GetProviderNames()) == 0 {
-			providers.InitializeProviders(m.Registry)
-		}
-
-		// Get the provider
+		// Get the provider from the registry
 		provider, err := m.Registry.Get(providerName)
 		if err != nil {
 			return WrapModel(m), func() tea.Msg {
@@ -370,84 +175,63 @@ func HandleProviderSelection(m *model.Model) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Set the provider name
 		newModel := m.Clone()
 		newModel.ProviderState.ProviderName = providerName
 
-		// Get authentication methods
-		authMethods := provider.GetAuthenticationMethods()
-		newModel.ProviderState.AuthState.AvailableMethods = authMethods
-
-		// If no authentication methods, skip to configuration
-		if len(authMethods) == 0 {
-			// Move to provider configuration
-			configKeys := provider.GetConfigKeys()
-			if len(configKeys) > 0 {
-				// Get options for first config key
-				firstKey := configKeys[0]
-				options, err := provider.GetConfigOptions(firstKey)
-				if err == nil {
-					newModel.ProviderState.ConfigOptions[firstKey] = options
+		// Special handling for AWS provider for backward compatibility
+		if providerName == "AWS" {
+			// Get profiles from the registry
+			profiles, err := provider.GetProfiles()
+			if err != nil {
+				return WrapModel(m), func() tea.Msg {
+					return model.ErrMsg{Err: err}
 				}
-
-				newModel.ProviderState.CurrentConfigKey = firstKey
-				newModel.CurrentView = constants.ViewProviderConfig
-			} else {
-				newModel.CurrentView = constants.ViewSelectService
 			}
-		} else {
-			// If there's only one authentication method, use it
-			if len(authMethods) == 1 {
-				newModel.ProviderState.AuthState.Method = authMethods[0]
 
-				// Get auth config keys
-				authConfigKeys := provider.GetAuthConfigKeys(authMethods[0])
+			// Sort the profiles alphabetically
+			sort.Strings(profiles)
 
-				// If no auth config keys, authenticate directly
-				if len(authConfigKeys) == 0 {
-					err := provider.Authenticate(authMethods[0], map[string]string{})
-					if err != nil {
-						newModel.ProviderState.AuthState.AuthError = err.Error()
-						newModel.CurrentView = constants.ViewAuthError
-					} else {
-						newModel.ProviderState.AuthState.IsAuthenticated = true
-
-						// Move to provider configuration
-						configKeys := provider.GetConfigKeys()
-						if len(configKeys) > 0 {
-							firstKey := configKeys[0]
-							options, err := provider.GetConfigOptions(firstKey)
-							if err == nil {
-								newModel.ProviderState.ConfigOptions[firstKey] = options
-							}
-
-							newModel.ProviderState.CurrentConfigKey = firstKey
-							newModel.CurrentView = constants.ViewProviderConfig
-						} else {
-							newModel.CurrentView = constants.ViewSelectService
-						}
-					}
-				} else {
-					// Show auth config view
-					newModel.ProviderState.AuthState.CurrentAuthConfigKey = authConfigKeys[0]
-
-					// Get options for the auth config key
-					options, err := provider.GetConfigOptions(authConfigKeys[0])
-					if err == nil {
-						newModel.ProviderState.ConfigOptions[authConfigKeys[0]] = options
-					}
-
-					newModel.CurrentView = constants.ViewAuthConfig
-				}
-			} else {
-				// Show auth method selection view
-				newModel.CurrentView = constants.ViewAuthMethodSelect
-			}
+			// Set profiles and transition to AWS config view
+			newModel.Profiles = profiles
+			newModel.CurrentView = constants.ViewAWSConfig
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
 		}
 
-		// For backward compatibility with AWS, also set the AWS config view
-		if providerName == "AWS" {
-			newModel.CurrentView = constants.ViewAWSConfig
+		// For other providers, follow the new flow
+		// Check if the provider is already authenticated
+		if provider.IsAuthenticated() {
+			// If authenticated, go to service selection
+			newModel.CurrentView = constants.ViewSelectService
+		} else {
+			// Get authentication methods
+			authMethods := provider.GetAuthenticationMethods()
+
+			newModel.ProviderState.AuthState.AvailableMethods = authMethods
+
+			if len(authMethods) == 1 {
+				// If only one auth method, select it automatically
+				newModel.ProviderState.AuthState.Method = authMethods[0]
+
+				// Get auth config keys for the selected method
+				configKeys := provider.GetAuthConfigKeys(authMethods[0])
+
+				if len(configKeys) > 0 {
+					// Initialize auth config map if needed
+					if newModel.ProviderState.AuthState.AuthConfig == nil {
+						newModel.ProviderState.AuthState.AuthConfig = make(map[string]string)
+					}
+					newModel.CurrentView = constants.ViewAuthConfig
+				} else {
+					newModel.CurrentView = constants.ViewProviderConfig
+				}
+			} else if len(authMethods) > 1 {
+				// If multiple auth methods, go to auth method selection
+				newModel.CurrentView = constants.ViewAuthMethodSelect
+			} else {
+				// If no auth methods, go to provider config
+				newModel.CurrentView = constants.ViewProviderConfig
+			}
 		}
 
 		view.UpdateTableForView(newModel)
@@ -456,44 +240,62 @@ func HandleProviderSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	return WrapModel(m), nil
 }
 
-// HandleAWSConfigSelection handles the selection of AWS profile or region
+// HandleAWSConfigSelection handles the selection of AWS configuration options
 func HandleAWSConfigSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		newModel := m.Clone()
 
-		// Handle "Manual Entry" option
-		if selected[0] == "Manual Entry" {
-			newModel.ManualInput = true
-			newModel.TextInput.Focus()
+		if m.GetAwsProfile() == "" {
+			// If no profile is selected, this is profile selection
+			profile := selected[0]
 
-			// Set appropriate placeholder based on context
-			if m.GetAwsProfile() == "" {
+			// Check if "Manual Entry" was selected
+			if profile == "Manual Entry" {
+				newModel.ManualInput = true
+				newModel.TextInput.Focus()
 				newModel.TextInput.Placeholder = constants.MsgEnterProfile
-			} else {
-				newModel.TextInput.Placeholder = constants.MsgEnterRegion
+				return WrapModel(newModel), nil
 			}
 
-			return WrapModel(newModel), nil
-		}
-
-		// Handle regular selection
-		if m.GetAwsProfile() == "" {
-			newModel.SetAwsProfile(selected[0])
+			newModel.SetAwsProfile(profile)
 			view.UpdateTableForView(newModel)
 		} else {
-			newModel.SetAwsRegion(selected[0])
+			// If profile is already selected, this is region selection
+			region := selected[0]
 
-			// Create the provider with the selected profile and region
-			_, err := providers.CreateProvider(newModel.Registry, "AWS", newModel.GetAwsProfile(), newModel.GetAwsRegion())
+			// Check if "Manual Entry" was selected
+			if region == "Manual Entry" {
+				newModel.ManualInput = true
+				newModel.TextInput.Focus()
+				newModel.TextInput.Placeholder = constants.MsgEnterRegion
+				return WrapModel(newModel), nil
+			}
+
+			newModel.SetAwsRegion(region)
+
+			// Configure the provider with the selected profile and region
+			provider, err := m.Registry.Get("AWS")
 			if err != nil {
-				return WrapModel(newModel), func() tea.Msg {
+				return WrapModel(m), func() tea.Msg {
 					return model.ErrMsg{Err: err}
 				}
 			}
 
+			err = provider.Configure(map[string]string{
+				"profile": newModel.GetAwsProfile(),
+				"region":  region,
+			})
+			if err != nil {
+				return WrapModel(m), func() tea.Msg {
+					return model.ErrMsg{Err: err}
+				}
+			}
+
+			// Move to service selection
 			newModel.CurrentView = constants.ViewSelectService
 			view.UpdateTableForView(newModel)
 		}
+
 		return WrapModel(newModel), nil
 	}
 	return WrapModel(m), nil
@@ -502,209 +304,181 @@ func HandleAWSConfigSelection(m *model.Model) (tea.Model, tea.Cmd) {
 // HandleAuthMethodSelection handles the selection of an authentication method
 func HandleAuthMethodSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		authMethod := selected[0]
+		methodName := selected[0]
 
-		// Get the provider
-		provider, err := m.Registry.Get(m.ProviderState.ProviderName)
-		if err != nil {
-			return WrapModel(m), func() tea.Msg {
-				return model.ErrMsg{Err: err}
+		// Find the selected method in available methods
+		var selectedMethod string
+		for _, method := range m.ProviderState.AuthState.AvailableMethods {
+			if method == methodName {
+				selectedMethod = method
+				break
 			}
 		}
 
-		newModel := m.Clone()
-		newModel.ProviderState.AuthState.Method = authMethod
+		if selectedMethod != "" {
+			newModel := m.Clone()
+			newModel.ProviderState.AuthState.Method = selectedMethod
 
-		// Get auth config keys
-		authConfigKeys := provider.GetAuthConfigKeys(authMethod)
-
-		// If no auth config keys, authenticate directly
-		if len(authConfigKeys) == 0 {
-			err := provider.Authenticate(authMethod, map[string]string{})
+			// Get the provider from the registry
+			provider, err := m.Registry.Get(m.ProviderState.ProviderName)
 			if err != nil {
-				newModel.ProviderState.AuthState.AuthError = err.Error()
-				newModel.CurrentView = constants.ViewAuthError
-			} else {
-				newModel.ProviderState.AuthState.IsAuthenticated = true
-
-				// Move to provider configuration
-				configKeys := provider.GetConfigKeys()
-				if len(configKeys) > 0 {
-					firstKey := configKeys[0]
-					options, err := provider.GetConfigOptions(firstKey)
-					if err == nil {
-						newModel.ProviderState.ConfigOptions[firstKey] = options
-					}
-
-					newModel.ProviderState.CurrentConfigKey = firstKey
-					newModel.CurrentView = constants.ViewProviderConfig
-				} else {
-					newModel.CurrentView = constants.ViewSelectService
+				return WrapModel(m), func() tea.Msg {
+					return model.ErrMsg{Err: err}
 				}
 			}
-		} else {
-			// Show auth config view
-			newModel.ProviderState.AuthState.CurrentAuthConfigKey = authConfigKeys[0]
 
-			// Get options for the auth config key
-			options, err := provider.GetConfigOptions(authConfigKeys[0])
-			if err == nil {
-				newModel.ProviderState.ConfigOptions[authConfigKeys[0]] = options
+			// Get auth config keys for the selected method
+			configKeys := provider.GetAuthConfigKeys(selectedMethod)
+
+			if len(configKeys) > 0 {
+				// Initialize auth config map if needed
+				if newModel.ProviderState.AuthState.AuthConfig == nil {
+					newModel.ProviderState.AuthState.AuthConfig = make(map[string]string)
+				}
+				newModel.CurrentView = constants.ViewAuthConfig
+			} else {
+				newModel.CurrentView = constants.ViewProviderConfig
 			}
 
-			newModel.CurrentView = constants.ViewAuthConfig
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
 		}
-
-		view.UpdateTableForView(newModel)
-		return WrapModel(newModel), nil
 	}
 	return WrapModel(m), nil
 }
 
-// HandleAuthConfigSelection handles the selection of an authentication configuration option
+// HandleAuthConfigSelection handles the selection of authentication configuration options
 func HandleAuthConfigSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		configValue := selected[0]
-
-		// Get the provider
-		provider, err := m.Registry.Get(m.ProviderState.ProviderName)
-		if err != nil {
-			return WrapModel(m), func() tea.Msg {
-				return model.ErrMsg{Err: err}
-			}
-		}
+		configKey := selected[0]
 
 		newModel := m.Clone()
+		newModel.ProviderState.AuthState.CurrentAuthConfigKey = configKey
+		newModel.ManualInput = true
+		newModel.TextInput.Focus()
+		newModel.TextInput.Placeholder = "Enter value for " + configKey
 
-		// Handle "Manual Entry" option
-		if configValue == "Manual Entry" {
-			newModel.ManualInput = true
-			newModel.TextInput.Focus()
-			newModel.TextInput.Placeholder = fmt.Sprintf("Enter %s", newModel.ProviderState.AuthState.CurrentAuthConfigKey)
-			return WrapModel(newModel), nil
-		}
-
-		// Set the auth config value
-		newModel.SetAuthConfig(newModel.ProviderState.AuthState.CurrentAuthConfigKey, configValue)
-
-		// Get the next auth config key
-		authConfigKeys := provider.GetAuthConfigKeys(newModel.ProviderState.AuthState.Method)
-		currentKeyIndex := -1
-		for i, key := range authConfigKeys {
-			if key == newModel.ProviderState.AuthState.CurrentAuthConfigKey {
-				currentKeyIndex = i
-				break
-			}
-		}
-
-		// If there are more auth config keys, show the next one
-		if currentKeyIndex < len(authConfigKeys)-1 {
-			nextKey := authConfigKeys[currentKeyIndex+1]
-			newModel.ProviderState.AuthState.CurrentAuthConfigKey = nextKey
-
-			// Get options for the next key
-			options, err := provider.GetConfigOptions(nextKey)
-			if err == nil {
-				newModel.ProviderState.ConfigOptions[nextKey] = options
-			}
-
-			view.UpdateTableForView(newModel)
-			return WrapModel(newModel), nil
-		}
-
-		// If all auth config keys are set, authenticate
-		err = provider.Authenticate(newModel.ProviderState.AuthState.Method, newModel.ProviderState.AuthState.AuthConfig)
-		if err != nil {
-			newModel.ProviderState.AuthState.AuthError = err.Error()
-			newModel.CurrentView = constants.ViewAuthError
-		} else {
-			newModel.ProviderState.AuthState.IsAuthenticated = true
-
-			// Move to provider configuration
-			configKeys := provider.GetConfigKeys()
-			if len(configKeys) > 0 {
-				firstKey := configKeys[0]
-				options, err := provider.GetConfigOptions(firstKey)
-				if err == nil {
-					newModel.ProviderState.ConfigOptions[firstKey] = options
-				}
-
-				newModel.ProviderState.CurrentConfigKey = firstKey
-				newModel.CurrentView = constants.ViewProviderConfig
-			} else {
-				newModel.CurrentView = constants.ViewSelectService
-			}
-		}
-
-		view.UpdateTableForView(newModel)
 		return WrapModel(newModel), nil
 	}
 	return WrapModel(m), nil
 }
 
-// HandleProviderConfigSelection handles the selection of a provider configuration option
+// HandleProviderConfigSelection handles the selection of provider configuration options
 func HandleProviderConfigSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
-		configValue := selected[0]
-
-		// Get the provider
-		provider, err := m.Registry.Get(m.ProviderState.ProviderName)
-		if err != nil {
-			return WrapModel(m), func() tea.Msg {
-				return model.ErrMsg{Err: err}
-			}
-		}
+		configKey := selected[0]
 
 		newModel := m.Clone()
+		newModel.ProviderState.CurrentConfigKey = configKey
+		newModel.ManualInput = true
+		newModel.TextInput.Focus()
+		newModel.TextInput.Placeholder = "Enter value for " + configKey
 
-		// Handle "Manual Entry" option
-		if configValue == "Manual Entry" {
-			newModel.ManualInput = true
-			newModel.TextInput.Focus()
-			newModel.TextInput.Placeholder = fmt.Sprintf("Enter %s", newModel.ProviderState.CurrentConfigKey)
-			return WrapModel(newModel), nil
-		}
-
-		// Set the config value
-		newModel.SetProviderConfig(newModel.ProviderState.CurrentConfigKey, configValue)
-
-		// Get the next config key
-		configKeys := provider.GetConfigKeys()
-		currentKeyIndex := -1
-		for i, key := range configKeys {
-			if key == newModel.ProviderState.CurrentConfigKey {
-				currentKeyIndex = i
-				break
-			}
-		}
-
-		// If there are more config keys, show the next one
-		if currentKeyIndex < len(configKeys)-1 {
-			nextKey := configKeys[currentKeyIndex+1]
-			newModel.ProviderState.CurrentConfigKey = nextKey
-
-			// Get options for the next key
-			options, err := provider.GetConfigOptions(nextKey)
-			if err == nil {
-				newModel.ProviderState.ConfigOptions[nextKey] = options
-			}
-
-			view.UpdateTableForView(newModel)
-			return WrapModel(newModel), nil
-		}
-
-		// If all config keys are set, configure the provider
-		err = provider.Configure(newModel.ProviderState.Config)
-		if err != nil {
-			return WrapModel(newModel), func() tea.Msg {
-				return model.ErrMsg{Err: err}
-			}
-		}
-
-		// Move to service selection
-		newModel.CurrentView = constants.ViewSelectService
-		view.UpdateTableForView(newModel)
 		return WrapModel(newModel), nil
 	}
 	return WrapModel(m), nil
+}
+
+// HandleEnter handles the Enter key press based on the current view
+func HandleEnter(m *model.Model) (tea.Model, tea.Cmd) {
+	// If manual input is enabled, handle text input submission
+	if m.ManualInput {
+		return HandleTextInputSubmission(m)
+	}
+
+	// Otherwise, handle table selection
+	return HandleTableSelect(m)
+}
+
+// HandleTextInputSubmission handles the submission of text input
+func HandleTextInputSubmission(m *model.Model) (tea.Model, tea.Cmd) {
+	newModel := m.Clone()
+	value := m.TextInput.Value()
+
+	switch m.CurrentView {
+	case constants.ViewAWSConfig:
+		// Handle AWS config input
+		if m.GetAwsProfile() == "" {
+			// This is profile input
+			if value != "" {
+				newModel.SetAwsProfile(value)
+				newModel.ManualInput = false
+				newModel.ResetTextInput()
+				view.UpdateTableForView(newModel)
+			}
+		} else {
+			// This is region input
+			if value != "" {
+				newModel.SetAwsRegion(value)
+				newModel.ManualInput = false
+				newModel.ResetTextInput()
+
+				// Configure the provider with the selected profile and region
+				provider, err := m.Registry.Get("AWS")
+				if err != nil {
+					return WrapModel(m), func() tea.Msg {
+						return model.ErrMsg{Err: err}
+					}
+				}
+
+				err = provider.Configure(map[string]string{
+					"profile": newModel.GetAwsProfile(),
+					"region":  value,
+				})
+				if err != nil {
+					return WrapModel(m), func() tea.Msg {
+						return model.ErrMsg{Err: err}
+					}
+				}
+
+				// Move to service selection
+				newModel.CurrentView = constants.ViewSelectService
+				view.UpdateTableForView(newModel)
+			}
+		}
+	case constants.ViewAuthConfig:
+		// Handle auth config input
+		if m.ProviderState.AuthState.CurrentAuthConfigKey != "" {
+			if newModel.ProviderState.AuthState.AuthConfig == nil {
+				newModel.ProviderState.AuthState.AuthConfig = make(map[string]string)
+			}
+			newModel.ProviderState.AuthState.AuthConfig[m.ProviderState.AuthState.CurrentAuthConfigKey] = value
+			newModel.ProviderState.AuthState.CurrentAuthConfigKey = ""
+			newModel.ManualInput = false
+			newModel.ResetTextInput()
+			view.UpdateTableForView(newModel)
+		}
+	case constants.ViewProviderConfig:
+		// Handle provider config input
+		if m.ProviderState.CurrentConfigKey != "" {
+			if newModel.ProviderState.Config == nil {
+				newModel.ProviderState.Config = make(map[string]string)
+			}
+			newModel.ProviderState.Config[m.ProviderState.CurrentConfigKey] = value
+			newModel.ProviderState.CurrentConfigKey = ""
+			newModel.ManualInput = false
+			newModel.ResetTextInput()
+			view.UpdateTableForView(newModel)
+		}
+	case constants.ViewSummary:
+		// Handle summary input (comments for approvals or commit IDs for pipeline starts)
+		if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {
+			newModel.CommitID = value
+			newModel.ManualInput = false
+			newModel.ResetTextInput()
+			newModel.CurrentView = constants.ViewExecutingAction
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
+		} else {
+			newModel.ApprovalComment = value
+			newModel.Summary = value
+			newModel.ManualInput = false
+			newModel.ResetTextInput()
+			newModel.CurrentView = constants.ViewExecutingAction
+			view.UpdateTableForView(newModel)
+			return WrapModel(newModel), nil
+		}
+	}
+
+	return WrapModel(newModel), nil
 }

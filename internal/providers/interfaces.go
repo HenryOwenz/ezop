@@ -85,6 +85,9 @@ type Provider interface {
 
 	// GetStartPipelineOperation returns the start pipeline operation
 	GetStartPipelineOperation() (StartPipelineOperation, error)
+
+	// GetFunctionStatusOperation returns the function status operation
+	GetFunctionStatusOperation() (FunctionStatusOperation, error)
 }
 
 // Service interface defines methods that all cloud services must implement

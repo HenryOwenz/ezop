@@ -9,6 +9,7 @@ import (
 
 	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/cloud/aws/codepipeline"
+	"github.com/HenryOwenz/cloudgate/internal/cloud/aws/lambda"
 )
 
 // Common errors
@@ -103,6 +104,9 @@ func (p *Provider) LoadConfig(profile, region string) error {
 
 	// Add CodePipeline service
 	p.services = append(p.services, codepipeline.NewService(profile, region))
+
+	// Add Lambda service
+	p.services = append(p.services, lambda.NewService(profile, region))
 
 	return nil
 }

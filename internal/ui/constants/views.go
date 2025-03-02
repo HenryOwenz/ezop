@@ -24,4 +24,8 @@ const (
 	ViewAuthConfig
 	ViewProviderConfig
 	ViewAuthError
+
+	// Lambda function views
+	ViewFunctionStatus
+	ViewFunctionDetails
 )

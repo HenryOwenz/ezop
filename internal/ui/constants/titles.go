@@ -18,4 +18,6 @@ const (
 	TitleError           = "Error"
 	TitleSuccess         = "Success"
 	TitleHelp            = "Help"
+	TitleFunctionStatus  = "Lambda Functions"
+	TitleFunctionDetails = "Function Details"
 )

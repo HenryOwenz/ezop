@@ -227,3 +227,13 @@ func (p *Provider) GetStartPipelineOperation() (providers.StartPipelineOperation
 	// Create a wrapper that implements the StartPipelineOperation interface
 	return &startPipelineOperation{provider: p}, nil
 }
+
+// GetFunctionStatusOperation returns the function status operation
+func (p *Provider) GetFunctionStatusOperation() (providers.FunctionStatusOperation, error) {
+	if !p.IsAuthenticated() {
+		return nil, fmt.Errorf("provider not authenticated")
+	}
+
+	// Create a wrapper that implements the FunctionStatusOperation interface
+	return &functionStatusOperation{provider: p}, nil
+}

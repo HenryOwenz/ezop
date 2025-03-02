@@ -85,3 +85,28 @@ func (o *startPipelineOperation) IsUIVisible() bool {
 func (o *startPipelineOperation) StartPipelineExecution(ctx context.Context, pipelineName string, commitID string) error {
 	return o.provider.StartPipeline(ctx, pipelineName, commitID)
 }
+
+// functionStatusOperation implements the FunctionStatusOperation interface
+type functionStatusOperation struct {
+	provider *Provider
+}
+
+// Name returns the operation's name
+func (o *functionStatusOperation) Name() string {
+	return "Function Status"
+}
+
+// Description returns the operation's description
+func (o *functionStatusOperation) Description() string {
+	return "View Lambda Function Status"
+}
+
+// IsUIVisible returns whether this operation should be visible in the UI
+func (o *functionStatusOperation) IsUIVisible() bool {
+	return true
+}
+
+// GetFunctionStatus returns the status of all Lambda functions
+func (o *functionStatusOperation) GetFunctionStatus(ctx context.Context) ([]providers.FunctionStatus, error) {
+	return o.provider.GetFunctionStatus(ctx)
+}

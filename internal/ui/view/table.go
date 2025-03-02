@@ -2,6 +2,7 @@ package view
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
@@ -98,6 +99,17 @@ func getColumnsForView(m *model.Model) []table.Column {
 			{Title: "Stage", Width: constants.TableDefaultWidth},
 			{Title: "Status", Width: constants.TableNarrowWidth},
 			{Title: "Last Updated", Width: constants.TableNarrowWidth},
+		}
+	case constants.ViewFunctionStatus:
+		return []table.Column{
+			{Title: "Function", Width: constants.TableWideWidth},
+			{Title: "Runtime", Width: constants.TableNarrowWidth},
+			{Title: "Last Updated", Width: constants.TableDefaultWidth},
+		}
+	case constants.ViewFunctionDetails:
+		return []table.Column{
+			{Title: "Property", Width: constants.TableDefaultWidth},
+			{Title: "Value", Width: constants.TableWideWidth},
 		}
 	case constants.ViewSummary:
 		return []table.Column{
@@ -342,6 +354,73 @@ func getRowsForView(m *model.Model) []table.Row {
 				stage.LastUpdated,
 			}
 		}
+		return rows
+	case constants.ViewFunctionStatus:
+		if m.Functions == nil {
+			return []table.Row{}
+		}
+		rows := make([]table.Row, len(m.Functions))
+		for i, function := range m.Functions {
+			// Clean up timestamp by removing the milliseconds and timezone offset
+			lastUpdate := function.LastUpdate
+			if len(lastUpdate) > 19 { // Format: "2024-06-29T07:10:02.331+0000"
+				lastUpdate = lastUpdate[:19] // Keep only "2024-06-29T07:10:02"
+				// Replace 'T' with a space for better readability
+				lastUpdate = strings.Replace(lastUpdate, "T", " ", 1)
+			}
+
+			rows[i] = table.Row{
+				function.Name,
+				function.Runtime,
+				lastUpdate,
+			}
+		}
+		return rows
+	case constants.ViewFunctionDetails:
+		if m.SelectedFunction == nil {
+			return []table.Row{}
+		}
+		function := m.SelectedFunction
+
+		// Format code size to be more readable (KB or MB)
+		var codeSizeFormatted string
+		if function.CodeSize < 1024 {
+			codeSizeFormatted = fmt.Sprintf("%d bytes", function.CodeSize)
+		} else if function.CodeSize < 1024*1024 {
+			codeSizeFormatted = fmt.Sprintf("%.2f KB", float64(function.CodeSize)/1024)
+		} else {
+			codeSizeFormatted = fmt.Sprintf("%.2f MB", float64(function.CodeSize)/(1024*1024))
+		}
+
+		// Clean up timestamp by removing the milliseconds and timezone offset
+		lastUpdate := function.LastUpdate
+		if len(lastUpdate) > 19 { // Format: "2024-06-29T07:10:02.331+0000"
+			lastUpdate = lastUpdate[:19] // Keep only "2024-06-29T07:10:02"
+			// Replace 'T' with a space for better readability
+			lastUpdate = strings.Replace(lastUpdate, "T", " ", 1)
+		}
+
+		rows := []table.Row{
+			{"Name", function.Name},
+			{"Description", function.Description},
+			{"ARN", function.FunctionArn},
+			{"Runtime", function.Runtime},
+			{"Handler", function.Handler},
+			{"Memory", fmt.Sprintf("%d MB", function.Memory)},
+			{"Timeout", fmt.Sprintf("%d seconds", function.Timeout)},
+			{"Code Size", codeSizeFormatted},
+			{"Last Updated", lastUpdate},
+			{"Version", function.Version},
+			{"Package Type", function.PackageType},
+			{"Architecture", function.Architecture},
+			{"Role", function.Role},
+		}
+
+		// Only add log group if it's available
+		if function.LogGroup != "" {
+			rows = append(rows, table.Row{"Log Group", function.LogGroup})
+		}
+
 		return rows
 	case constants.ViewSummary:
 		if m.SelectedOperation != nil && m.SelectedOperation.Name == "Start Pipeline" {

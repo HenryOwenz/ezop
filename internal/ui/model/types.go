@@ -41,6 +41,9 @@ type StageStatus = providers.StageStatus
 // PipelineStatus is an alias for providers.PipelineStatus
 type PipelineStatus = providers.PipelineStatus
 
+// FunctionStatus is an alias for providers.FunctionStatus
+type FunctionStatus = providers.FunctionStatus
+
 // ApprovalsMsg represents a message containing approvals
 type ApprovalsMsg struct {
 	Approvals []ApprovalAction
@@ -61,4 +64,10 @@ type PipelineStatusMsg struct {
 // PipelineExecutionMsg represents the result of a pipeline execution
 type PipelineExecutionMsg struct {
 	Err error
+}
+
+// FunctionStatusMsg represents a message containing function status
+type FunctionStatusMsg struct {
+	Functions []FunctionStatus
+	Provider  providers.Provider
 }

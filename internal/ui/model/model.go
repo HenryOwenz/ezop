@@ -54,6 +54,7 @@ type Model struct {
 	Provider          providers.Provider
 	Approvals         []providers.ApprovalAction
 	Pipelines         []providers.PipelineStatus
+	Functions         []providers.FunctionStatus
 	Services          []Service
 	Categories        []Category
 	Operations        []Operation
@@ -61,6 +62,7 @@ type Model struct {
 	SelectedCategory  *Category
 	SelectedOperation *Operation
 	SelectedApproval  *providers.ApprovalAction
+	SelectedFunction  *providers.FunctionStatus
 	ApproveAction     bool
 	Summary           string
 	SelectedPipeline  *providers.PipelineStatus
@@ -195,6 +197,7 @@ func New() *Model {
 		Regions:    []string{},
 		Approvals:  []providers.ApprovalAction{},
 		Pipelines:  []providers.PipelineStatus{},
+		Functions:  []providers.FunctionStatus{},
 		Services:   []Service{},
 		Categories: []Category{},
 		Operations: []Operation{},
@@ -513,4 +516,42 @@ func (m *Model) SetPipelines(pipelines []providers.PipelineStatus) {
 	m.ProviderState.ProviderSpecificState["pipelines"] = pipelines
 	// Also set in legacy field for backward compatibility
 	m.Pipelines = pipelines
+}
+
+// GetFunctions returns the functions from the provider-specific state
+func (m *Model) GetFunctions() []providers.FunctionStatus {
+	// First check the new structure
+	if functions, ok := m.ProviderState.ProviderSpecificState["functions"]; ok {
+		if typedFunctions, ok := functions.([]providers.FunctionStatus); ok {
+			return typedFunctions
+		}
+	}
+	// Fall back to legacy field
+	return m.Functions
+}
+
+// SetFunctions sets the functions in the provider-specific state
+func (m *Model) SetFunctions(functions []providers.FunctionStatus) {
+	m.ProviderState.ProviderSpecificState["functions"] = functions
+	// Also set in legacy field for backward compatibility
+	m.Functions = functions
+}
+
+// GetSelectedFunction returns the selected function from the provider-specific state
+func (m *Model) GetSelectedFunction() *providers.FunctionStatus {
+	// First check the new structure
+	if function, ok := m.ProviderState.ProviderSpecificState["selected-function"]; ok {
+		if typedFunction, ok := function.(*providers.FunctionStatus); ok {
+			return typedFunction
+		}
+	}
+	// Fall back to legacy field
+	return m.SelectedFunction
+}
+
+// SetSelectedFunction sets the selected function in the provider-specific state
+func (m *Model) SetSelectedFunction(function *providers.FunctionStatus) {
+	m.ProviderState.ProviderSpecificState["selected-function"] = function
+	// Also set in legacy field for backward compatibility
+	m.SelectedFunction = function
 }

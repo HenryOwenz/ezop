@@ -8,8 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// HandleServiceSelection handles the selection of a service
-func HandleServiceSelection(m *model.Model) (tea.Model, tea.Cmd) {
+// SelectService handles the selection of a service
+func SelectService(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		serviceName := selected[0]
 
@@ -44,8 +44,8 @@ func HandleServiceSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	return WrapModel(m), nil
 }
 
-// HandleCategorySelection handles the selection of a category
-func HandleCategorySelection(m *model.Model) (tea.Model, tea.Cmd) {
+// SelectCategory handles the selection of a category
+func SelectCategory(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		categoryName := selected[0]
 
@@ -93,8 +93,8 @@ func HandleCategorySelection(m *model.Model) (tea.Model, tea.Cmd) {
 	return WrapModel(m), nil
 }
 
-// HandleOperationSelection handles the selection of an operation
-func HandleOperationSelection(m *model.Model) (tea.Model, tea.Cmd) {
+// SelectOperation handles the selection of an operation
+func SelectOperation(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
 		operationName := selected[0]
 
@@ -151,21 +151,14 @@ func HandleOperationSelection(m *model.Model) (tea.Model, tea.Cmd) {
 			// Handle different operations
 			switch operationName {
 			case "Pipeline Approvals":
-				newModel.IsLoading = true
-				newModel.LoadingMsg = "Fetching approvals..."
-				return WrapModel(newModel), FetchApprovals(newModel)
+				return HandlePipelineApprovals(newModel)
 			case "Pipeline Status":
-				newModel.IsLoading = true
-				newModel.LoadingMsg = "Fetching pipeline status..."
-				return WrapModel(newModel), FetchPipelineStatus(newModel)
+				return HandlePipelineStatus(newModel)
 			case "Start Pipeline":
-				newModel.CurrentView = constants.ViewPipelineStatus
-				newModel.IsLoading = true
-				newModel.LoadingMsg = "Fetching pipelines..."
-				return WrapModel(newModel), FetchPipelineStatus(newModel)
+				return HandlePipelineStatus(newModel)
+			case "Function Status":
+				return HandleFunctionStatus(newModel)
 			default:
-				newModel.CurrentView = constants.ViewConfirmation
-				view.UpdateTableForView(newModel)
 				return WrapModel(newModel), nil
 			}
 		}

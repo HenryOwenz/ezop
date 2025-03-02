@@ -51,6 +51,7 @@ func HandleSummaryConfirmation(m *model.Model) (tea.Model, tea.Cmd) {
 		// Move to execution view
 		newModel.CurrentView = constants.ViewExecutingAction
 		newModel.ManualInput = false
+		newModel.ResetTextInput()
 		view.UpdateTableForView(newModel)
 		return WrapModel(newModel), nil
 	}
