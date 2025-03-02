@@ -22,6 +22,7 @@ A terminal-based application that unifies multi-cloud operations across AWS, Azu
 [![Lint](https://github.com/HenryOwenz/cloudgate/actions/workflows/lint.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/lint.yml)
 [![Test](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/test.yml)
 [![Build](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml/badge.svg)](https://github.com/HenryOwenz/cloudgate/actions/workflows/build.yml)
+[![Dependabot Status](https://img.shields.io/badge/Dependabot-enabled-brightgreen.svg)](https://github.com/HenryOwenz/cloudgate/blob/main/.github/dependabot.yml)
 [![Go ReportCard](https://goreportcard.com/badge/HenryOwenz/cloudgate)](https://goreportcard.com/report/HenryOwenz/cloudgate)
 
 ## Features 
