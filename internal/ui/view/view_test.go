@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 )
@@ -151,7 +151,7 @@ func TestGetContextText(t *testing.T) {
 				m.SetAwsProfile("test-profile")
 				m.SetAwsRegion("us-west-2")
 				m.SelectedOperation = &model.Operation{Name: "Start Pipeline"}
-				m.SetSelectedPipeline(&providers.PipelineStatus{Name: "TestPipeline"})
+				m.SetSelectedPipeline(&cloud.PipelineStatus{Name: "TestPipeline"})
 				return m
 			},
 			expectedText: "",
@@ -174,7 +174,7 @@ func TestGetContextText(t *testing.T) {
 				m.CurrentView = constants.ViewConfirmation
 				m.SetAwsProfile("test-profile")
 				m.SetAwsRegion("us-west-2")
-				m.SetSelectedApproval(&providers.ApprovalAction{
+				m.SetSelectedApproval(&cloud.ApprovalAction{
 					PipelineName: "TestPipeline",
 					StageName:    "TestStage",
 					ActionName:   "TestAction",

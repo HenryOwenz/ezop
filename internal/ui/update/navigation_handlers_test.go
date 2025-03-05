@@ -3,7 +3,7 @@ package update
 import (
 	"testing"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 )
@@ -152,7 +152,7 @@ func TestNavigateBack(t *testing.T) {
 				m := model.New()
 				m.CurrentView = constants.ViewExecutingAction
 				m.SelectedOperation = &model.Operation{Name: "Start Pipeline"}
-				m.SelectedPipeline = &providers.PipelineStatus{Name: "TestPipeline"}
+				m.SelectedPipeline = &cloud.PipelineStatus{Name: "TestPipeline"}
 				return m
 			},
 			expectedView: constants.ViewPipelineStatus,
@@ -179,7 +179,7 @@ func TestNavigateBack(t *testing.T) {
 				m := model.New()
 				m.CurrentView = constants.ViewSummary
 				m.SelectedOperation = &model.Operation{Name: "Start Pipeline"}
-				m.SelectedPipeline = &providers.PipelineStatus{Name: "TestPipeline"}
+				m.SelectedPipeline = &cloud.PipelineStatus{Name: "TestPipeline"}
 				m.Summary = "Test summary"
 				return m
 			},
@@ -201,7 +201,7 @@ func TestNavigateBack(t *testing.T) {
 				m := model.New()
 				m.CurrentView = constants.ViewExecutingAction
 				m.SelectedOperation = &model.Operation{Name: "Pipeline Approvals"}
-				m.SelectedApproval = &providers.ApprovalAction{
+				m.SelectedApproval = &cloud.ApprovalAction{
 					PipelineName: "TestPipeline",
 					StageName:    "TestStage",
 					ActionName:   "TestAction",
@@ -264,7 +264,7 @@ func TestPipelineStartNavigationFlow(t *testing.T) {
 	// Step 1: Navigate to pipeline status view
 	// This would normally be done by HandlePipelineStatus
 	m.CurrentView = constants.ViewPipelineStatus
-	m.SelectedPipeline = &providers.PipelineStatus{Name: "TestPipeline"}
+	m.SelectedPipeline = &cloud.PipelineStatus{Name: "TestPipeline"}
 
 	// Step 2: Navigate to summary view
 	// This would normally be done by HandlePipelineSelection
@@ -316,7 +316,7 @@ func TestHandleTextInputSubmissionDoesNotExecuteActions(t *testing.T) {
 				m := model.New()
 				m.CurrentView = constants.ViewSummary
 				m.SelectedOperation = &model.Operation{Name: "Pipeline Approvals"}
-				m.SelectedApproval = &providers.ApprovalAction{
+				m.SelectedApproval = &cloud.ApprovalAction{
 					PipelineName: "TestPipeline",
 					StageName:    "TestStage",
 					ActionName:   "TestAction",
@@ -339,7 +339,7 @@ func TestHandleTextInputSubmissionDoesNotExecuteActions(t *testing.T) {
 				m := model.New()
 				m.CurrentView = constants.ViewSummary
 				m.SelectedOperation = &model.Operation{Name: "Start Pipeline"}
-				m.SelectedPipeline = &providers.PipelineStatus{Name: "TestPipeline"}
+				m.SelectedPipeline = &cloud.PipelineStatus{Name: "TestPipeline"}
 				m.ManualInput = true
 				m.TextInput.SetValue("abc123")
 				m.TextInput.Focus()

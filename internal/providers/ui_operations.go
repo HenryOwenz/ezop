@@ -2,6 +2,8 @@ package providers
 
 import (
 	"context"
+
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 )
 
 // UIOperation represents a user-facing operation in the UI
@@ -21,10 +23,10 @@ type CodePipelineManualApprovalOperation interface {
 	UIOperation
 
 	// GetPendingApprovals returns all pending manual approval actions
-	GetPendingApprovals(ctx context.Context) ([]ApprovalAction, error)
+	GetPendingApprovals(ctx context.Context) ([]cloud.ApprovalAction, error)
 
 	// ApproveAction approves or rejects an approval action
-	ApproveAction(ctx context.Context, action ApprovalAction, approved bool, comment string) error
+	ApproveAction(ctx context.Context, action cloud.ApprovalAction, approved bool, comment string) error
 }
 
 // PipelineStatusOperation represents an operation to view pipeline status
@@ -32,7 +34,7 @@ type PipelineStatusOperation interface {
 	UIOperation
 
 	// GetPipelineStatus returns the status of all pipelines
-	GetPipelineStatus(ctx context.Context) ([]PipelineStatus, error)
+	GetPipelineStatus(ctx context.Context) ([]cloud.PipelineStatus, error)
 }
 
 // StartPipelineOperation represents an operation to start a pipeline execution
@@ -48,23 +50,5 @@ type FunctionStatusOperation interface {
 	UIOperation
 
 	// GetFunctionStatus returns the status of all Lambda functions
-	GetFunctionStatus(ctx context.Context) ([]FunctionStatus, error)
-}
-
-// FunctionStatus represents the status of a Lambda function
-type FunctionStatus struct {
-	Name         string
-	Runtime      string
-	Memory       int32
-	Timeout      int32
-	LastUpdate   string
-	Role         string
-	Handler      string
-	Description  string
-	FunctionArn  string
-	CodeSize     int64
-	Version      string
-	PackageType  string
-	Architecture string
-	LogGroup     string
+	GetFunctionStatus(ctx context.Context) ([]cloud.FunctionStatus, error)
 }

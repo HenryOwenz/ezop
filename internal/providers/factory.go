@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 )
 
 // Global registry for AWS provider replacement
@@ -96,16 +98,16 @@ func (p *awsProvider) Configure(config map[string]string) error {
 	return nil
 }
 
-func (p *awsProvider) GetApprovals(ctx context.Context) ([]ApprovalAction, error) {
-	return []ApprovalAction{}, nil
+func (p *awsProvider) GetApprovals(ctx context.Context) ([]cloud.ApprovalAction, error) {
+	return []cloud.ApprovalAction{}, nil
 }
 
-func (p *awsProvider) ApproveAction(ctx context.Context, action ApprovalAction, approved bool, comment string) error {
+func (p *awsProvider) ApproveAction(ctx context.Context, action cloud.ApprovalAction, approved bool, comment string) error {
 	return nil
 }
 
-func (p *awsProvider) GetStatus(ctx context.Context) ([]PipelineStatus, error) {
-	return []PipelineStatus{}, nil
+func (p *awsProvider) GetStatus(ctx context.Context) ([]cloud.PipelineStatus, error) {
+	return []cloud.PipelineStatus{}, nil
 }
 
 func (p *awsProvider) StartPipeline(ctx context.Context, pipelineName string, commitID string) error {

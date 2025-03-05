@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
@@ -47,10 +47,13 @@ func HandleFunctionStatus(m *model.Model) (tea.Model, tea.Cmd) {
 // HandleFunctionSelection handles the selection of a function
 func HandleFunctionSelection(m *model.Model) (tea.Model, tea.Cmd) {
 	if selected := m.Table.SelectedRow(); len(selected) > 0 {
+		// Clone the model to avoid modifying the original
+		newModel := m.Clone()
+
 		functionName := selected[0]
 
 		// Find the selected function
-		var selectedFunction *providers.FunctionStatus
+		var selectedFunction *cloud.FunctionStatus
 		for _, function := range m.Functions {
 			if function.Name == functionName {
 				selectedFunction = &function
@@ -65,7 +68,6 @@ func HandleFunctionSelection(m *model.Model) (tea.Model, tea.Cmd) {
 		}
 
 		// Update the model
-		newModel := m.Clone()
 		newModel.SetSelectedFunction(selectedFunction)
 		newModel.CurrentView = constants.ViewFunctionDetails
 		view.UpdateTableForView(newModel)

@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/styles"
@@ -53,20 +54,20 @@ type Model struct {
 	Profiles          []string
 	Regions           []string
 	Provider          providers.Provider
-	Approvals         []providers.ApprovalAction
-	Pipelines         []providers.PipelineStatus
-	Functions         []providers.FunctionStatus
+	Approvals         []cloud.ApprovalAction
+	Pipelines         []cloud.PipelineStatus
+	Functions         []cloud.FunctionStatus
 	Services          []Service
 	Categories        []Category
 	Operations        []Operation
 	SelectedService   *Service
 	SelectedCategory  *Category
 	SelectedOperation *Operation
-	SelectedApproval  *providers.ApprovalAction
-	SelectedFunction  *providers.FunctionStatus
+	SelectedApproval  *cloud.ApprovalAction
+	SelectedFunction  *cloud.FunctionStatus
 	ApproveAction     bool
 	Summary           string
-	SelectedPipeline  *providers.PipelineStatus
+	SelectedPipeline  *cloud.PipelineStatus
 	ManualCommitID    bool
 	CommitID          string
 	ApprovalComment   string
@@ -196,9 +197,9 @@ func New() *Model {
 		// Initialize legacy fields
 		Profiles:   []string{},
 		Regions:    []string{},
-		Approvals:  []providers.ApprovalAction{},
-		Pipelines:  []providers.PipelineStatus{},
-		Functions:  []providers.FunctionStatus{},
+		Approvals:  []cloud.ApprovalAction{},
+		Pipelines:  []cloud.PipelineStatus{},
+		Functions:  []cloud.FunctionStatus{},
 		Services:   []Service{},
 		Categories: []Category{},
 		Operations: []Operation{},
@@ -439,10 +440,10 @@ func (m *Model) SetManualCommitID(manual bool) {
 }
 
 // GetSelectedApproval returns the selected approval from the provider-specific state
-func (m *Model) GetSelectedApproval() *providers.ApprovalAction {
+func (m *Model) GetSelectedApproval() *cloud.ApprovalAction {
 	// First check the new structure
 	if approval, ok := m.ProviderState.ProviderSpecificState["selected-approval"]; ok {
-		if typedApproval, ok := approval.(*providers.ApprovalAction); ok {
+		if typedApproval, ok := approval.(*cloud.ApprovalAction); ok {
 			return typedApproval
 		}
 	}
@@ -451,17 +452,17 @@ func (m *Model) GetSelectedApproval() *providers.ApprovalAction {
 }
 
 // SetSelectedApproval sets the selected approval in the provider-specific state
-func (m *Model) SetSelectedApproval(approval *providers.ApprovalAction) {
+func (m *Model) SetSelectedApproval(approval *cloud.ApprovalAction) {
 	m.ProviderState.ProviderSpecificState["selected-approval"] = approval
 	// Also set in legacy field for backward compatibility
 	m.SelectedApproval = approval
 }
 
 // GetSelectedPipeline returns the selected pipeline from the provider-specific state
-func (m *Model) GetSelectedPipeline() *providers.PipelineStatus {
+func (m *Model) GetSelectedPipeline() *cloud.PipelineStatus {
 	// First check the new structure
 	if pipeline, ok := m.ProviderState.ProviderSpecificState["selected-pipeline"]; ok {
-		if typedPipeline, ok := pipeline.(*providers.PipelineStatus); ok {
+		if typedPipeline, ok := pipeline.(*cloud.PipelineStatus); ok {
 			return typedPipeline
 		}
 	}
@@ -470,17 +471,17 @@ func (m *Model) GetSelectedPipeline() *providers.PipelineStatus {
 }
 
 // SetSelectedPipeline sets the selected pipeline in the provider-specific state
-func (m *Model) SetSelectedPipeline(pipeline *providers.PipelineStatus) {
+func (m *Model) SetSelectedPipeline(pipeline *cloud.PipelineStatus) {
 	m.ProviderState.ProviderSpecificState["selected-pipeline"] = pipeline
 	// Also set in legacy field for backward compatibility
 	m.SelectedPipeline = pipeline
 }
 
 // GetApprovals returns the approvals from the provider-specific state
-func (m *Model) GetApprovals() []providers.ApprovalAction {
+func (m *Model) GetApprovals() []cloud.ApprovalAction {
 	// First check the new structure
 	if approvals, ok := m.ProviderState.ProviderSpecificState["approvals"]; ok {
-		if typedApprovals, ok := approvals.([]providers.ApprovalAction); ok {
+		if typedApprovals, ok := approvals.([]cloud.ApprovalAction); ok {
 			return typedApprovals
 		}
 	}
@@ -489,17 +490,17 @@ func (m *Model) GetApprovals() []providers.ApprovalAction {
 }
 
 // SetApprovals sets the approvals in the provider-specific state
-func (m *Model) SetApprovals(approvals []providers.ApprovalAction) {
+func (m *Model) SetApprovals(approvals []cloud.ApprovalAction) {
 	m.ProviderState.ProviderSpecificState["approvals"] = approvals
 	// Also set in legacy field for backward compatibility
 	m.Approvals = approvals
 }
 
 // GetPipelines returns the pipelines from the provider-specific state
-func (m *Model) GetPipelines() []providers.PipelineStatus {
+func (m *Model) GetPipelines() []cloud.PipelineStatus {
 	// First check the new structure
 	if pipelines, ok := m.ProviderState.ProviderSpecificState["pipelines"]; ok {
-		if typedPipelines, ok := pipelines.([]providers.PipelineStatus); ok {
+		if typedPipelines, ok := pipelines.([]cloud.PipelineStatus); ok {
 			return typedPipelines
 		}
 	}
@@ -508,17 +509,17 @@ func (m *Model) GetPipelines() []providers.PipelineStatus {
 }
 
 // SetPipelines sets the pipelines in the provider-specific state
-func (m *Model) SetPipelines(pipelines []providers.PipelineStatus) {
+func (m *Model) SetPipelines(pipelines []cloud.PipelineStatus) {
 	m.ProviderState.ProviderSpecificState["pipelines"] = pipelines
 	// Also set in legacy field for backward compatibility
 	m.Pipelines = pipelines
 }
 
 // GetFunctions returns the functions from the provider-specific state
-func (m *Model) GetFunctions() []providers.FunctionStatus {
+func (m *Model) GetFunctions() []cloud.FunctionStatus {
 	// First check the new structure
 	if functions, ok := m.ProviderState.ProviderSpecificState["functions"]; ok {
-		if typedFunctions, ok := functions.([]providers.FunctionStatus); ok {
+		if typedFunctions, ok := functions.([]cloud.FunctionStatus); ok {
 			return typedFunctions
 		}
 	}
@@ -527,17 +528,17 @@ func (m *Model) GetFunctions() []providers.FunctionStatus {
 }
 
 // SetFunctions sets the functions in the provider-specific state
-func (m *Model) SetFunctions(functions []providers.FunctionStatus) {
+func (m *Model) SetFunctions(functions []cloud.FunctionStatus) {
 	m.ProviderState.ProviderSpecificState["functions"] = functions
 	// Also set in legacy field for backward compatibility
 	m.Functions = functions
 }
 
 // GetSelectedFunction returns the selected function from the provider-specific state
-func (m *Model) GetSelectedFunction() *providers.FunctionStatus {
+func (m *Model) GetSelectedFunction() *cloud.FunctionStatus {
 	// First check the new structure
 	if function, ok := m.ProviderState.ProviderSpecificState["selected-function"]; ok {
-		if typedFunction, ok := function.(*providers.FunctionStatus); ok {
+		if typedFunction, ok := function.(*cloud.FunctionStatus); ok {
 			return typedFunction
 		}
 	}
@@ -546,7 +547,7 @@ func (m *Model) GetSelectedFunction() *providers.FunctionStatus {
 }
 
 // SetSelectedFunction sets the selected function in the provider-specific state
-func (m *Model) SetSelectedFunction(function *providers.FunctionStatus) {
+func (m *Model) SetSelectedFunction(function *cloud.FunctionStatus) {
 	m.ProviderState.ProviderSpecificState["selected-function"] = function
 	// Also set in legacy field for backward compatibility
 	m.SelectedFunction = function

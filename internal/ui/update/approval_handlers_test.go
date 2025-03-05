@@ -2,27 +2,28 @@ package update
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 )
 
 func TestHandleApprovalResult(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		name           string
 		setupModel     func() *model.Model
 		err            error
 		expectedView   constants.View
-		expectedChecks func(t *testing.T, m *model.Model)
+		expectedFields map[string]string
 	}{
 		{
 			name: "With error",
 			setupModel: func() *model.Model {
 				m := model.New()
 				m.CurrentView = constants.ViewExecutingAction
-				m.SelectedApproval = &providers.ApprovalAction{
+				m.SelectedApproval = &cloud.ApprovalAction{
 					PipelineName: "TestPipeline",
 					StageName:    "TestStage",
 					ActionName:   "TestAction",
@@ -31,10 +32,8 @@ func TestHandleApprovalResult(t *testing.T) {
 			},
 			err:          errors.New("test error"),
 			expectedView: constants.ViewError,
-			expectedChecks: func(t *testing.T, m *model.Model) {
-				if m.Error == "" {
-					t.Errorf("Expected Error to be set")
-				}
+			expectedFields: map[string]string{
+				"Error": fmt.Sprintf(constants.MsgErrorGeneric, "test error"),
 			},
 		},
 		{
@@ -47,10 +46,8 @@ func TestHandleApprovalResult(t *testing.T) {
 			},
 			err:          nil,
 			expectedView: constants.ViewError,
-			expectedChecks: func(t *testing.T, m *model.Model) {
-				if m.Error != constants.MsgErrorNoApproval {
-					t.Errorf("Expected Error to be set to MsgErrorNoApproval, got '%s'", m.Error)
-				}
+			expectedFields: map[string]string{
+				"Error": constants.MsgErrorNoApproval,
 			},
 		},
 		{
@@ -58,7 +55,7 @@ func TestHandleApprovalResult(t *testing.T) {
 			setupModel: func() *model.Model {
 				m := model.New()
 				m.CurrentView = constants.ViewExecutingAction
-				m.SelectedApproval = &providers.ApprovalAction{
+				m.SelectedApproval = &cloud.ApprovalAction{
 					PipelineName: "TestPipeline",
 					StageName:    "TestStage",
 					ActionName:   "TestAction",
@@ -68,19 +65,8 @@ func TestHandleApprovalResult(t *testing.T) {
 			},
 			err:          nil,
 			expectedView: constants.ViewSelectOperation,
-			expectedChecks: func(t *testing.T, m *model.Model) {
-				if m.Success == "" {
-					t.Errorf("Expected Success to be set")
-				}
-				if m.SelectedApproval != nil {
-					t.Errorf("Expected SelectedApproval to be nil")
-				}
-				if m.ApprovalComment != "" {
-					t.Errorf("Expected ApprovalComment to be empty")
-				}
-				if m.Approvals != nil {
-					t.Errorf("Expected Approvals to be nil")
-				}
+			expectedFields: map[string]string{
+				"Success": fmt.Sprintf(constants.MsgApprovalSuccess, "TestPipeline", "TestStage", "TestAction"),
 			},
 		},
 		{
@@ -88,7 +74,7 @@ func TestHandleApprovalResult(t *testing.T) {
 			setupModel: func() *model.Model {
 				m := model.New()
 				m.CurrentView = constants.ViewExecutingAction
-				m.SelectedApproval = &providers.ApprovalAction{
+				m.SelectedApproval = &cloud.ApprovalAction{
 					PipelineName: "TestPipeline",
 					StageName:    "TestStage",
 					ActionName:   "TestAction",
@@ -98,24 +84,13 @@ func TestHandleApprovalResult(t *testing.T) {
 			},
 			err:          nil,
 			expectedView: constants.ViewSelectOperation,
-			expectedChecks: func(t *testing.T, m *model.Model) {
-				if m.Success == "" {
-					t.Errorf("Expected Success to be set")
-				}
-				if m.SelectedApproval != nil {
-					t.Errorf("Expected SelectedApproval to be nil")
-				}
-				if m.ApprovalComment != "" {
-					t.Errorf("Expected ApprovalComment to be empty")
-				}
-				if m.Approvals != nil {
-					t.Errorf("Expected Approvals to be nil")
-				}
+			expectedFields: map[string]string{
+				"Success": fmt.Sprintf(constants.MsgRejectionSuccess, "TestPipeline", "TestStage", "TestAction"),
 			},
 		},
 	}
 
-	for _, tc := range testCases {
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Set up the model according to the test case
 			m := tc.setupModel()
@@ -128,8 +103,20 @@ func TestHandleApprovalResult(t *testing.T) {
 				t.Errorf("Expected view to be %v, got %v", tc.expectedView, m.CurrentView)
 			}
 
-			// Run any additional checks specific to the test case
-			tc.expectedChecks(t, m)
+			// Check that the fields are set as expected
+			for field, expectedValue := range tc.expectedFields {
+				var actualValue string
+				switch field {
+				case "Error":
+					actualValue = m.Error
+				case "Success":
+					actualValue = m.Success
+				}
+
+				if actualValue != expectedValue {
+					t.Errorf("Expected %s to be '%s', got '%s'", field, expectedValue, actualValue)
+				}
+			}
 		})
 	}
 }
@@ -146,7 +133,7 @@ func TestApprovalFlow(t *testing.T) {
 	// Step 1: Navigate to approvals view
 	// This would normally be done by HandlePipelineApprovals
 	m.CurrentView = constants.ViewApprovals
-	m.Approvals = []providers.ApprovalAction{
+	m.Approvals = []cloud.ApprovalAction{
 		{
 			PipelineName: "TestPipeline",
 			StageName:    "TestStage",

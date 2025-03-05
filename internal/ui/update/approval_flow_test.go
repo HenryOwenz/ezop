@@ -3,7 +3,7 @@ package update
 import (
 	"testing"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
@@ -23,7 +23,7 @@ func TestCompletePipelineApprovalFlow(t *testing.T) {
 
 	// Step 2: Set up approvals view (simulating HandlePipelineApprovals)
 	m.CurrentView = constants.ViewApprovals
-	m.Approvals = []providers.ApprovalAction{
+	m.Approvals = []cloud.ApprovalAction{
 		{
 			PipelineName: "TestPipeline",
 			StageName:    "TestStage",
@@ -157,6 +157,10 @@ func TestCompletePipelineApprovalFlow(t *testing.T) {
 	if backResult.TextInput.Value() != wrapper.Model.Summary {
 		t.Errorf("Expected TextInput value to be '%s', got '%s'", wrapper.Model.Summary, backResult.TextInput.Value())
 	}
+
+	// Step 5: Handle the approval result
+	// This would normally be done by HandleApprovalResult
+	HandleApprovalResult(m, nil)
 }
 
 // TestHandleTextInputSubmissionTransitionsToExecutionView tests that the HandleTextInputSubmission function
@@ -175,7 +179,7 @@ func TestHandleTextInputSubmissionTransitionsToExecutionView(t *testing.T) {
 				m := model.New()
 				m.CurrentView = constants.ViewSummary
 				m.SelectedOperation = &model.Operation{Name: "Pipeline Approvals"}
-				m.SelectedApproval = &providers.ApprovalAction{
+				m.SelectedApproval = &cloud.ApprovalAction{
 					PipelineName: "TestPipeline",
 					StageName:    "TestStage",
 					ActionName:   "TestAction",
@@ -199,7 +203,7 @@ func TestHandleTextInputSubmissionTransitionsToExecutionView(t *testing.T) {
 				m := model.New()
 				m.CurrentView = constants.ViewSummary
 				m.SelectedOperation = &model.Operation{Name: "Start Pipeline"}
-				m.SelectedPipeline = &providers.PipelineStatus{Name: "TestPipeline"}
+				m.SelectedPipeline = &cloud.PipelineStatus{Name: "TestPipeline"}
 				m.ManualInput = true
 				m.TextInput.SetValue("abc123")
 				m.TextInput.Focus()

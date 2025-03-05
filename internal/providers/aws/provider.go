@@ -172,7 +172,7 @@ func (p *Provider) GetStartPipelineOperation() (providers.StartPipelineOperation
 }
 
 // GetApprovals returns all pending approvals for the provider
-func (p *Provider) GetApprovals(ctx context.Context) ([]providers.ApprovalAction, error) {
+func (p *Provider) GetApprovals(ctx context.Context) ([]cloud.ApprovalAction, error) {
 	if !p.IsAuthenticated() {
 		return nil, fmt.Errorf("provider not authenticated")
 	}
@@ -188,7 +188,7 @@ func (p *Provider) GetApprovals(ctx context.Context) ([]providers.ApprovalAction
 }
 
 // ApproveAction approves or rejects an approval action
-func (p *Provider) ApproveAction(ctx context.Context, action providers.ApprovalAction, approved bool, comment string) error {
+func (p *Provider) ApproveAction(ctx context.Context, action cloud.ApprovalAction, approved bool, comment string) error {
 	if !p.IsAuthenticated() {
 		return fmt.Errorf("provider not authenticated")
 	}
@@ -204,7 +204,7 @@ func (p *Provider) ApproveAction(ctx context.Context, action providers.ApprovalA
 }
 
 // GetStatus returns the status of all pipelines
-func (p *Provider) GetStatus(ctx context.Context) ([]providers.PipelineStatus, error) {
+func (p *Provider) GetStatus(ctx context.Context) ([]cloud.PipelineStatus, error) {
 	if !p.IsAuthenticated() {
 		return nil, fmt.Errorf("provider not authenticated")
 	}
@@ -215,7 +215,7 @@ func (p *Provider) GetStatus(ctx context.Context) ([]providers.PipelineStatus, e
 		return nil, err
 	}
 
-	// Use the operation to get pipeline status
+	// Use the operation to get the pipeline status
 	return operation.GetPipelineStatus(ctx)
 }
 

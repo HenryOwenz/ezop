@@ -3,7 +3,7 @@ package model
 import (
 	"testing"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 )
 
 func TestGetterSetterMethods(t *testing.T) {
@@ -74,7 +74,7 @@ func TestGetterSetterMethods(t *testing.T) {
 		}
 
 		// Test setting and getting a value
-		approval := &providers.ApprovalAction{
+		approval := &cloud.ApprovalAction{
 			PipelineName: "TestPipeline",
 			StageName:    "TestStage",
 			ActionName:   "TestAction",
@@ -98,9 +98,9 @@ func TestGetterSetterMethods(t *testing.T) {
 		}
 
 		// Test setting and getting a value
-		pipeline := &providers.PipelineStatus{
+		pipeline := &cloud.PipelineStatus{
 			Name: "TestPipeline",
-			Stages: []providers.StageStatus{
+			Stages: []cloud.StageStatus{
 				{
 					Name:   "TestStage",
 					Status: "Succeeded",
@@ -125,7 +125,7 @@ func TestGetterSetterMethods(t *testing.T) {
 		}
 
 		// Test setting and getting a value
-		approvals := []providers.ApprovalAction{
+		approvals := []cloud.ApprovalAction{
 			{
 				PipelineName: "TestPipeline1",
 				StageName:    "TestStage1",
@@ -155,7 +155,7 @@ func TestGetterSetterMethods(t *testing.T) {
 		}
 
 		// Test setting and getting a value
-		pipelines := []providers.PipelineStatus{
+		pipelines := []cloud.PipelineStatus{
 			{
 				Name: "TestPipeline1",
 			},

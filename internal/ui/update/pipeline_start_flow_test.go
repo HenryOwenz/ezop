@@ -3,7 +3,7 @@ package update
 import (
 	"testing"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
@@ -23,10 +23,10 @@ func TestCompletePipelineStartFlow(t *testing.T) {
 
 	// Step 2: Set up pipelines view (simulating HandlePipelineStatus)
 	m.CurrentView = constants.ViewPipelineStatus
-	m.Pipelines = []providers.PipelineStatus{
+	m.Pipelines = []cloud.PipelineStatus{
 		{
 			Name:   "TestPipeline",
-			Stages: []providers.StageStatus{},
+			Stages: []cloud.StageStatus{},
 		},
 	}
 	view.UpdateTableForView(m)

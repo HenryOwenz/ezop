@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 )
 
@@ -32,17 +33,17 @@ type ErrMsg struct {
 	Err error
 }
 
-// ApprovalAction is an alias for providers.ApprovalAction
-type ApprovalAction = providers.ApprovalAction
+// ApprovalAction is an alias for cloud.ApprovalAction
+type ApprovalAction = cloud.ApprovalAction
 
-// StageStatus is an alias for providers.StageStatus
-type StageStatus = providers.StageStatus
+// StageStatus is an alias for cloud.StageStatus
+type StageStatus = cloud.StageStatus
 
-// PipelineStatus is an alias for providers.PipelineStatus
-type PipelineStatus = providers.PipelineStatus
+// PipelineStatus is an alias for cloud.PipelineStatus
+type PipelineStatus = cloud.PipelineStatus
 
-// FunctionStatus is an alias for providers.FunctionStatus
-type FunctionStatus = providers.FunctionStatus
+// FunctionStatus is an alias for cloud.FunctionStatus
+type FunctionStatus = cloud.FunctionStatus
 
 // ApprovalsMsg represents a message containing approvals
 type ApprovalsMsg struct {

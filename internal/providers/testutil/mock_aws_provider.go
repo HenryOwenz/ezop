@@ -3,6 +3,7 @@ package testutil
 import (
 	"context"
 
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/providers"
 )
 
@@ -103,8 +104,8 @@ func (p *MockAWSProvider) Services() []providers.Service {
 }
 
 // GetApprovals returns all pending approvals for the provider
-func (p *MockAWSProvider) GetApprovals(ctx context.Context) ([]providers.ApprovalAction, error) {
-	return []providers.ApprovalAction{
+func (p *MockAWSProvider) GetApprovals(ctx context.Context) ([]cloud.ApprovalAction, error) {
+	return []cloud.ApprovalAction{
 		{
 			PipelineName: "TestPipeline",
 			StageName:    "TestStage",
@@ -115,16 +116,16 @@ func (p *MockAWSProvider) GetApprovals(ctx context.Context) ([]providers.Approva
 }
 
 // ApproveAction approves or rejects an approval action
-func (p *MockAWSProvider) ApproveAction(ctx context.Context, action providers.ApprovalAction, approved bool, comment string) error {
+func (p *MockAWSProvider) ApproveAction(ctx context.Context, action cloud.ApprovalAction, approved bool, comment string) error {
 	return nil
 }
 
 // GetStatus returns the status of all pipelines
-func (p *MockAWSProvider) GetStatus(ctx context.Context) ([]providers.PipelineStatus, error) {
-	return []providers.PipelineStatus{
+func (p *MockAWSProvider) GetStatus(ctx context.Context) ([]cloud.PipelineStatus, error) {
+	return []cloud.PipelineStatus{
 		{
 			Name: "TestPipeline",
-			Stages: []providers.StageStatus{
+			Stages: []cloud.StageStatus{
 				{
 					Name:        "TestStage",
 					Status:      "Succeeded",
@@ -266,8 +267,8 @@ func (o *MockCodePipelineManualApprovalOperation) IsUIVisible() bool {
 }
 
 // GetPendingApprovals returns the pending approvals
-func (o *MockCodePipelineManualApprovalOperation) GetPendingApprovals(ctx context.Context) ([]providers.ApprovalAction, error) {
-	return []providers.ApprovalAction{
+func (o *MockCodePipelineManualApprovalOperation) GetPendingApprovals(ctx context.Context) ([]cloud.ApprovalAction, error) {
+	return []cloud.ApprovalAction{
 		{
 			PipelineName: "TestPipeline",
 			StageName:    "TestStage",
@@ -278,7 +279,7 @@ func (o *MockCodePipelineManualApprovalOperation) GetPendingApprovals(ctx contex
 }
 
 // ApproveAction approves or rejects an action
-func (o *MockCodePipelineManualApprovalOperation) ApproveAction(ctx context.Context, approval providers.ApprovalAction, approve bool, comment string) error {
+func (o *MockCodePipelineManualApprovalOperation) ApproveAction(ctx context.Context, approval cloud.ApprovalAction, approve bool, comment string) error {
 	return nil
 }
 
@@ -301,11 +302,11 @@ func (o *MockPipelineStatusOperation) IsUIVisible() bool {
 }
 
 // GetPipelineStatus returns the pipeline status
-func (o *MockPipelineStatusOperation) GetPipelineStatus(ctx context.Context) ([]providers.PipelineStatus, error) {
-	return []providers.PipelineStatus{
+func (o *MockPipelineStatusOperation) GetPipelineStatus(ctx context.Context) ([]cloud.PipelineStatus, error) {
+	return []cloud.PipelineStatus{
 		{
 			Name: "TestPipeline",
-			Stages: []providers.StageStatus{
+			Stages: []cloud.StageStatus{
 				{
 					Name:        "TestStage",
 					Status:      "Succeeded",
@@ -358,8 +359,8 @@ func (o *MockFunctionStatusOperation) IsUIVisible() bool {
 }
 
 // GetFunctionStatus returns mock function status data
-func (o *MockFunctionStatusOperation) GetFunctionStatus(ctx context.Context) ([]providers.FunctionStatus, error) {
-	return []providers.FunctionStatus{
+func (o *MockFunctionStatusOperation) GetFunctionStatus(ctx context.Context) ([]cloud.FunctionStatus, error) {
+	return []cloud.FunctionStatus{
 		{
 			Name:       "test-function",
 			Runtime:    "nodejs14.x",
