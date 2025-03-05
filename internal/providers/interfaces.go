@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/HenryOwenz/cloudgate/internal/cloud"
@@ -158,7 +157,7 @@ func (r *ProviderRegistry) Get(name string) (Provider, error) {
 	defer r.mu.RUnlock()
 	provider, ok := r.providers[name]
 	if !ok {
-		return nil, fmt.Errorf("provider %s not found", name)
+		return nil, ErrProviderNotFound
 	}
 	return provider, nil
 }

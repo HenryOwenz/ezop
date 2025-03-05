@@ -16,24 +16,30 @@ type MockAWSProvider struct {
 
 // NewMockAWSProvider creates a new mock AWS provider
 func NewMockAWSProvider() providers.Provider {
-	return &MockAWSProvider{
+	// Create a mock AWS provider
+	mockProvider := &MockAWSProvider{
 		profiles: []string{"default", "dev", "prod"},
 		regions:  []string{"us-east-1", "us-west-2", "eu-west-1"},
 		services: []providers.Service{
 			NewMockCodePipelineService(),
 		},
 	}
+
+	return mockProvider
 }
 
 // NewMockAWSProviderWithProfiles creates a new mock AWS provider with custom profiles
 func NewMockAWSProviderWithProfiles(profiles []string) providers.Provider {
-	return &MockAWSProvider{
+	// Create a mock AWS provider
+	mockProvider := &MockAWSProvider{
 		profiles: profiles,
 		regions:  []string{"us-east-1", "us-west-2", "eu-west-1"},
 		services: []providers.Service{
 			NewMockCodePipelineService(),
 		},
 	}
+
+	return mockProvider
 }
 
 // Name returns the name of the provider
