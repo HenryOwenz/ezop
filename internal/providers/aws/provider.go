@@ -177,23 +177,14 @@ func (p *Provider) GetApprovals(ctx context.Context) ([]providers.ApprovalAction
 		return nil, fmt.Errorf("provider not authenticated")
 	}
 
-	approvals, err := p.GetPendingApprovals(ctx)
+	// Get the CodePipeline manual approval operation
+	operation, err := p.GetCodePipelineManualApprovalOperation()
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert internal ApprovalAction to providers.ApprovalAction
-	providerApprovals := make([]providers.ApprovalAction, len(approvals))
-	for i, approval := range approvals {
-		providerApprovals[i] = providers.ApprovalAction{
-			PipelineName: approval.PipelineName,
-			StageName:    approval.StageName,
-			ActionName:   approval.ActionName,
-			Token:        approval.Token,
-		}
-	}
-
-	return providerApprovals, nil
+	// Use the operation to get pending approvals
+	return operation.GetPendingApprovals(ctx)
 }
 
 // ApproveAction approves or rejects an approval action
@@ -202,15 +193,14 @@ func (p *Provider) ApproveAction(ctx context.Context, action providers.ApprovalA
 		return fmt.Errorf("provider not authenticated")
 	}
 
-	// Convert providers.ApprovalAction to internal ApprovalAction
-	internalAction := ApprovalAction{
-		PipelineName: action.PipelineName,
-		StageName:    action.StageName,
-		ActionName:   action.ActionName,
-		Token:        action.Token,
+	// Get the CodePipeline manual approval operation
+	operation, err := p.GetCodePipelineManualApprovalOperation()
+	if err != nil {
+		return err
 	}
 
-	return p.PutApprovalResult(ctx, internalAction, approved, comment)
+	// Use the operation to approve or reject the action
+	return operation.ApproveAction(ctx, action, approved, comment)
 }
 
 // GetStatus returns the status of all pipelines
@@ -219,29 +209,14 @@ func (p *Provider) GetStatus(ctx context.Context) ([]providers.PipelineStatus, e
 		return nil, fmt.Errorf("provider not authenticated")
 	}
 
-	statuses, err := p.GetPipelineStatus(ctx)
+	// Get the pipeline status operation
+	operation, err := p.GetPipelineStatusOperation()
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert internal PipelineStatus to providers.PipelineStatus
-	providerStatuses := make([]providers.PipelineStatus, len(statuses))
-	for i, status := range statuses {
-		providerStages := make([]providers.StageStatus, len(status.Stages))
-		for j, stage := range status.Stages {
-			providerStages[j] = providers.StageStatus{
-				Name:        stage.Name,
-				Status:      stage.Status,
-				LastUpdated: stage.LastUpdated,
-			}
-		}
-		providerStatuses[i] = providers.PipelineStatus{
-			Name:   status.Name,
-			Stages: providerStages,
-		}
-	}
-
-	return providerStatuses, nil
+	// Use the operation to get pipeline status
+	return operation.GetPipelineStatus(ctx)
 }
 
 // StartPipeline starts a pipeline execution
@@ -250,7 +225,14 @@ func (p *Provider) StartPipeline(ctx context.Context, pipelineName string, commi
 		return fmt.Errorf("provider not authenticated")
 	}
 
-	return p.StartPipelineExecution(ctx, pipelineName, commitID)
+	// Get the start pipeline operation
+	operation, err := p.GetStartPipelineOperation()
+	if err != nil {
+		return err
+	}
+
+	// Use the operation to start the pipeline
+	return operation.StartPipelineExecution(ctx, pipelineName, commitID)
 }
 
 // ServiceAdapter adapts a cloud.Service to a providers.Service
