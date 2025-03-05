@@ -1,11 +1,7 @@
 package aws
 
 import (
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/cloud/aws/codepipeline"
@@ -14,9 +10,7 @@ import (
 
 // Common errors
 var (
-	ErrAWSConfigNotFound = errors.New("aws configuration not found")
-	ErrProfileNotFound   = errors.New("aws profile not found")
-	ErrRegionNotFound    = errors.New("aws region not found")
+	ErrNotAuthenticated = fmt.Errorf("not authenticated")
 )
 
 // Provider represents the AWS cloud provider.
@@ -48,89 +42,52 @@ func (p *Provider) Services() []cloud.Service {
 	return p.services
 }
 
-// GetProfiles returns all available AWS profiles from the user's home directory.
+// GetProfiles returns all available profiles for this provider.
 func (p *Provider) GetProfiles() ([]string, error) {
-	profiles := make([]string, 0)
-
-	// Get user's home directory
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user home directory: %w", err)
-	}
-
-	// Parse AWS config file
-	configProfiles, err := parseAWSConfigFile(filepath.Join(homeDir, ".aws", "config"))
-	if err == nil {
-		profiles = append(profiles, configProfiles...)
-	}
-
-	// Parse AWS credentials file
-	credProfiles, err := parseAWSConfigFile(filepath.Join(homeDir, ".aws", "credentials"))
-	if err == nil {
-		profiles = append(profiles, credProfiles...)
-	}
-
-	// Remove duplicates
-	uniqueProfiles := make(map[string]bool)
-	for _, profile := range profiles {
-		uniqueProfiles[profile] = true
-	}
-
-	// Convert back to slice
-	profiles = make([]string, 0, len(uniqueProfiles))
-	for profile := range uniqueProfiles {
-		profiles = append(profiles, profile)
-	}
-
-	return profiles, nil
+	return getAWSProfiles()
 }
 
-// LoadConfig loads AWS configuration based on the provided profile and region.
+// LoadConfig loads the provider configuration with the given profile and region.
 func (p *Provider) LoadConfig(profile, region string) error {
-	if profile == "" {
-		return ErrProfileNotFound
-	}
-
-	if region == "" {
-		return ErrRegionNotFound
-	}
-
-	// Set profile and region
 	p.profile = profile
 	p.region = region
 
-	// Initialize services
+	// Register services
 	p.services = make([]cloud.Service, 0)
-
-	// Add CodePipeline service
-	p.services = append(p.services, codepipeline.NewService(profile, region))
-
-	// Add Lambda service
 	p.services = append(p.services, lambda.NewService(profile, region))
+	p.services = append(p.services, codepipeline.NewService(profile, region))
 
 	return nil
 }
 
-// parseAWSConfigFile parses an AWS config file and returns the profile names.
-func parseAWSConfigFile(filePath string) ([]string, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
+// GetFunctionStatusOperation returns the function status operation
+func (p *Provider) GetFunctionStatusOperation() (cloud.FunctionStatusOperation, error) {
+	if p.profile == "" || p.region == "" {
+		return nil, ErrNotAuthenticated
 	}
+	return lambda.NewFunctionStatusOperation(p.profile, p.region), nil
+}
 
-	lines := strings.Split(string(data), "\n")
-	profiles := make([]string, 0)
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-			// Extract profile name
-			profile := line[1 : len(line)-1]
-			// Always use TrimPrefix regardless of whether the prefix exists
-			profile = strings.TrimPrefix(profile, "profile ")
-			profiles = append(profiles, profile)
-		}
+// GetCodePipelineManualApprovalOperation returns the CodePipeline manual approval operation
+func (p *Provider) GetCodePipelineManualApprovalOperation() (cloud.CodePipelineManualApprovalOperation, error) {
+	if p.profile == "" || p.region == "" {
+		return nil, ErrNotAuthenticated
 	}
+	return codepipeline.NewCloudManualApprovalOperation(p.profile, p.region), nil
+}
 
-	return profiles, nil
+// GetPipelineStatusOperation returns the pipeline status operation
+func (p *Provider) GetPipelineStatusOperation() (cloud.PipelineStatusOperation, error) {
+	if p.profile == "" || p.region == "" {
+		return nil, ErrNotAuthenticated
+	}
+	return codepipeline.NewCloudPipelineStatusOperation(p.profile, p.region), nil
+}
+
+// GetStartPipelineOperation returns the start pipeline operation
+func (p *Provider) GetStartPipelineOperation() (cloud.StartPipelineOperation, error) {
+	if p.profile == "" || p.region == "" {
+		return nil, ErrNotAuthenticated
+	}
+	return codepipeline.NewCloudStartPipelineOperation(p.profile, p.region), nil
 }

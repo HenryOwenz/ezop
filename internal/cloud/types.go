@@ -20,6 +20,18 @@ type Provider interface {
 
 	// LoadConfig loads the provider configuration with the given profile and region.
 	LoadConfig(profile, region string) error
+
+	// GetFunctionStatusOperation returns the function status operation
+	GetFunctionStatusOperation() (FunctionStatusOperation, error)
+
+	// GetCodePipelineManualApprovalOperation returns the CodePipeline manual approval operation
+	GetCodePipelineManualApprovalOperation() (CodePipelineManualApprovalOperation, error)
+
+	// GetPipelineStatusOperation returns the pipeline status operation
+	GetPipelineStatusOperation() (PipelineStatusOperation, error)
+
+	// GetStartPipelineOperation returns the start pipeline operation
+	GetStartPipelineOperation() (StartPipelineOperation, error)
 }
 
 // Service represents a cloud service.
@@ -62,4 +74,90 @@ type Operation interface {
 
 	// IsUIVisible returns whether this operation should be visible in the UI.
 	IsUIVisible() bool
+}
+
+// UIOperation represents a user-facing operation in the UI
+type UIOperation interface {
+	// Name returns the operation's name
+	Name() string
+
+	// Description returns the operation's description
+	Description() string
+
+	// IsUIVisible returns whether this operation should be visible in the UI
+	IsUIVisible() bool
+}
+
+// ApprovalAction represents a pending approval in a pipeline
+type ApprovalAction struct {
+	PipelineName string
+	StageName    string
+	ActionName   string
+	Token        string
+}
+
+// StageStatus represents the status of a pipeline stage
+type StageStatus struct {
+	Name        string
+	Status      string
+	LastUpdated string
+}
+
+// PipelineStatus represents the status of a pipeline and its stages
+type PipelineStatus struct {
+	Name   string
+	Stages []StageStatus
+}
+
+// FunctionStatus represents the status of a Lambda function
+type FunctionStatus struct {
+	Name         string
+	Runtime      string
+	Memory       int32
+	Timeout      int32
+	LastUpdate   string
+	Role         string
+	Handler      string
+	Description  string
+	FunctionArn  string
+	CodeSize     int64
+	Version      string
+	PackageType  string
+	Architecture string
+	LogGroup     string
+}
+
+// CodePipelineManualApprovalOperation represents a manual approval operation for AWS CodePipeline
+type CodePipelineManualApprovalOperation interface {
+	UIOperation
+
+	// GetPendingApprovals returns all pending manual approval actions
+	GetPendingApprovals(ctx context.Context) ([]ApprovalAction, error)
+
+	// ApproveAction approves or rejects an approval action
+	ApproveAction(ctx context.Context, action ApprovalAction, approved bool, comment string) error
+}
+
+// PipelineStatusOperation represents an operation to view pipeline status
+type PipelineStatusOperation interface {
+	UIOperation
+
+	// GetPipelineStatus returns the status of all pipelines
+	GetPipelineStatus(ctx context.Context) ([]PipelineStatus, error)
+}
+
+// StartPipelineOperation represents an operation to start a pipeline execution
+type StartPipelineOperation interface {
+	UIOperation
+
+	// StartPipelineExecution starts a pipeline execution
+	StartPipelineExecution(ctx context.Context, pipelineName string, commitID string) error
+}
+
+// FunctionStatusOperation represents an operation to view Lambda function status
+type FunctionStatusOperation interface {
+	UIOperation
+
+	// GetFunctionStatus returns the status of all Lambda functions
+	GetFunctionStatus(ctx context.Context) ([]FunctionStatus, error)
 }

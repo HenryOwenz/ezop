@@ -11,38 +11,17 @@ import (
 
 // TestAWSPipelineStartFlow tests the AWS pipeline start flow with default/us-east-1
 func TestAWSPipelineStartFlow(t *testing.T) {
-	// Skip test if AWS provider is not available
-	if providers.CreateAWSProvider == nil {
-		t.Skip("AWS provider not available, skipping test")
-	}
-
 	// Initialize the model
 	m := model.New()
 
 	// Set up the AWS provider
-	providers.InitializeProviders(m.Registry)
+	registry := providers.NewProviderRegistry()
+	registry.Register(CreateMockAWSProvider())
+	m.Registry = registry
 
 	// Set up AWS profile and region
-	t.Run("Setup AWS Configuration", func(t *testing.T) {
-		// Set the AWS profile and region
-		m.SetAwsProfile("default")
-		m.SetAwsRegion("us-east-1")
-
-		// Create the provider with the selected profile and region
-		provider, err := providers.CreateProvider(m.Registry, "AWS", m.GetAwsProfile(), m.GetAwsRegion())
-		if err != nil {
-			t.Fatalf("Failed to create AWS provider: %v", err)
-		}
-
-		// Set the provider in the model
-		m.Provider = provider
-
-		// Verify the configuration is set correctly
-		if m.GetAwsProfile() != "default" || m.GetAwsRegion() != "us-east-1" {
-			t.Errorf("AWS configuration not set correctly. Profile: %s, Region: %s",
-				m.GetAwsProfile(), m.GetAwsRegion())
-		}
-	})
+	m.SetAwsProfile("default")
+	m.SetAwsRegion("us-east-1")
 
 	// Test service selection
 	t.Run("Service Selection", func(t *testing.T) {

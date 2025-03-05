@@ -1,12 +1,14 @@
 package aws
 
 import (
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	cloudAws "github.com/HenryOwenz/cloudgate/internal/cloud/aws"
 )
 
-func init() {
-	// Set the CreateAWSProvider function in the providers package
-	providers.CreateAWSProvider = func() providers.Provider {
-		return New()
-	}
+// CreateProvider creates a new AWS provider.
+func CreateProvider() *Provider {
+	// Create a new cloud provider
+	cloudProvider := cloudAws.New()
+
+	// Create a new provider adapter
+	return New(cloudProvider)
 }

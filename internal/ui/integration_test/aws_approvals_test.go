@@ -11,16 +11,13 @@ import (
 
 // TestAWSApprovalsFlow tests the AWS approvals flow with default/us-east-1
 func TestAWSApprovalsFlow(t *testing.T) {
-	// Skip test if AWS provider is not available
-	if providers.CreateAWSProvider == nil {
-		t.Skip("AWS provider not available, skipping test")
-	}
-
 	// Initialize the model
 	m := model.New()
 
 	// Set up the AWS provider
-	providers.InitializeProviders(m.Registry)
+	registry := providers.NewProviderRegistry()
+	registry.Register(CreateMockAWSProvider())
+	m.Registry = registry
 
 	// Set up AWS profile and region
 	t.Run("Setup AWS Configuration", func(t *testing.T) {

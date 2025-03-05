@@ -5,7 +5,7 @@ import (
 	"github.com/HenryOwenz/cloudgate/internal/providers/testutil"
 )
 
-func init() {
-	// Set up the mock AWS provider
-	providers.CreateAWSProvider = testutil.NewMockAWSProvider
+// CreateMockAWSProvider is a helper function that creates a mock AWS provider.
+func CreateMockAWSProvider() providers.Provider {
+	return testutil.NewMockAWSProvider()
 }

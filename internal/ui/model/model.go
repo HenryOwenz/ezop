@@ -211,18 +211,13 @@ func (m *Model) Init() tea.Cmd {
 	m.Regions = constants.DefaultAWSRegions
 
 	// Initialize the AWS provider to get profiles
-	if providers.CreateAWSProvider != nil {
-		awsProvider := providers.CreateAWSProvider()
-		if awsProvider != nil {
-			profiles, err := awsProvider.GetProfiles()
-			if err == nil && len(profiles) > 0 {
-				// Sort the profiles alphabetically
-				sort.Strings(profiles)
-				m.Profiles = profiles
-			} else {
-				// Fallback to default profile if there's an error
-				m.Profiles = []string{"default"}
-			}
+	awsProvider, _ := m.Registry.GetProvider("AWS")
+	if awsProvider != nil {
+		profiles, err := awsProvider.GetProfiles()
+		if err == nil && len(profiles) > 0 {
+			// Sort the profiles alphabetically
+			sort.Strings(profiles)
+			m.Profiles = profiles
 		}
 	}
 

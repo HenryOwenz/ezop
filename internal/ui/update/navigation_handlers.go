@@ -281,10 +281,8 @@ func HandleAWSConfigSelection(m *model.Model) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			err = provider.Configure(map[string]string{
-				"profile": newModel.GetAwsProfile(),
-				"region":  region,
-			})
+			// Use LoadConfig instead of Configure to properly initialize the services
+			err = provider.LoadConfig(newModel.GetAwsProfile(), region)
 			if err != nil {
 				return WrapModel(m), func() tea.Msg {
 					return model.ErrMsg{Err: err}

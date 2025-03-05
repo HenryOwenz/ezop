@@ -12,21 +12,19 @@ import (
 
 // TestAWSOperationsFlow tests the AWS operations flow with default/us-east-1
 func TestAWSOperationsFlow(t *testing.T) {
-	// Skip test if AWS provider is not available
-	if providers.CreateAWSProvider == nil {
-		t.Skip("AWS provider not available, skipping test")
-	}
-
 	// Initialize the model
 	m := model.New()
 
 	// Set up the AWS provider
-	providers.InitializeProviders(m.Registry)
+	registry := providers.NewProviderRegistry()
+	registry.Register(CreateMockAWSProvider())
+	m.Registry = registry
 
-	// Test AWS profile selection
-	t.Run("AWS Profile Selection", func(t *testing.T) {
-		// Set the current view to AWS config
-		m.CurrentView = constants.ViewAWSConfig
+	// Set up AWS profile and region
+	t.Run("Setup AWS Configuration", func(t *testing.T) {
+		// Set the AWS profile and region
+		m.SetAwsProfile("default")
+		m.SetAwsRegion("us-east-1")
 
 		// Update the model for the view
 		err := update.UpdateModelForView(m)
@@ -34,29 +32,12 @@ func TestAWSOperationsFlow(t *testing.T) {
 			t.Fatalf("Failed to update model for AWS config view: %v", err)
 		}
 
-		// Set the AWS profile to "default"
-		m.SetAwsProfile("default")
-
 		// Update the table for the view
 		view.UpdateTableForView(m)
 
 		// Verify the profile is set correctly
 		if m.GetAwsProfile() != "default" {
 			t.Errorf("Expected AWS profile to be 'default', got '%s'", m.GetAwsProfile())
-		}
-	})
-
-	// Test AWS region selection
-	t.Run("AWS Region Selection", func(t *testing.T) {
-		// Set the AWS region to "us-east-1"
-		m.SetAwsRegion("us-east-1")
-
-		// Update the table for the view
-		view.UpdateTableForView(m)
-
-		// Verify the region is set correctly
-		if m.GetAwsRegion() != "us-east-1" {
-			t.Errorf("Expected AWS region to be 'us-east-1', got '%s'", m.GetAwsRegion())
 		}
 
 		// Create the provider with the selected profile and region

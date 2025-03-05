@@ -2,6 +2,7 @@ package view
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -202,6 +203,11 @@ func getRowsForView(m *model.Model) []table.Row {
 		for i, service := range services {
 			rows[i] = table.Row{service.Name(), service.Description()}
 		}
+
+		// Sort services by name in ascending order
+		sort.Slice(rows, func(i, j int) bool {
+			return rows[i][0] < rows[j][0]
+		})
 
 		return rows
 	case constants.ViewSelectCategory:
