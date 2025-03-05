@@ -1,9 +1,10 @@
-package integration_test
+package integration
 
 import (
 	"testing"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
+	"github.com/HenryOwenz/cloudgate/internal/cloudproviders"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/update"
@@ -16,7 +17,7 @@ func TestAWSCodePipelineOperations(t *testing.T) {
 	m := model.New()
 
 	// Set up the AWS provider
-	registry := providers.NewProviderRegistry()
+	registry := cloud.NewProviderRegistry()
 	registry.Register(CreateMockAWSProvider())
 	m.Registry = registry
 
@@ -25,7 +26,7 @@ func TestAWSCodePipelineOperations(t *testing.T) {
 	m.SetAwsRegion("us-east-1")
 
 	// Create the provider with the selected profile and region
-	provider, err := providers.CreateProvider(m.Registry, "AWS", m.GetAwsProfile(), m.GetAwsRegion())
+	provider, err := cloudproviders.CreateProvider(m.Registry, "AWS", m.GetAwsProfile(), m.GetAwsRegion())
 	if err != nil {
 		t.Fatalf("Failed to create AWS provider: %v", err)
 	}

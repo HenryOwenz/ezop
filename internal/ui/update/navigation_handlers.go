@@ -419,15 +419,16 @@ func HandleTextInputSubmission(m *model.Model) (tea.Model, tea.Cmd) {
 					}
 				}
 
-				err = provider.Configure(map[string]string{
-					"profile": newModel.GetAwsProfile(),
-					"region":  value,
-				})
+				// Use LoadConfig instead of Configure to properly initialize the services
+				err = provider.LoadConfig(newModel.GetAwsProfile(), value)
 				if err != nil {
 					return WrapModel(m), func() tea.Msg {
 						return model.ErrMsg{Err: err}
 					}
 				}
+
+				// Store the provider for later use
+				newModel.Provider = provider
 
 				// Move to service selection
 				newModel.CurrentView = constants.ViewSelectService

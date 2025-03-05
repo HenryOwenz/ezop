@@ -7,7 +7,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
+	"github.com/HenryOwenz/cloudgate/internal/cloudproviders"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 )
@@ -129,7 +130,7 @@ func getRowsForView(m *model.Model) []table.Row {
 	case constants.ViewProviders:
 		// Initialize providers if not already done
 		if len(m.Registry.GetProviderNames()) == 0 {
-			providers.InitializeProviders(m.Registry)
+			cloudproviders.InitializeProviders(m.Registry)
 		}
 
 		// Get all providers from the registry
@@ -222,7 +223,7 @@ func getRowsForView(m *model.Model) []table.Row {
 		}
 
 		// Find the selected service
-		var selectedService providers.Service
+		var selectedService cloud.Service
 		for _, service := range provider.Services() {
 			if service.Name() == m.SelectedService.Name {
 				selectedService = service
@@ -237,10 +238,9 @@ func getRowsForView(m *model.Model) []table.Row {
 		// Get all categories from the service
 		categories := selectedService.Categories()
 
-		// Filter out internal categories
-		var visibleCategories []providers.Category
+		// Filter out non-UI visible categories
+		var visibleCategories []cloud.Category
 		for _, category := range categories {
-			// Only include categories that are marked as UI visible
 			if category.IsUIVisible() {
 				visibleCategories = append(visibleCategories, category)
 			}
@@ -264,7 +264,7 @@ func getRowsForView(m *model.Model) []table.Row {
 		}
 
 		// Find the selected service
-		var selectedService providers.Service
+		var selectedService cloud.Service
 		for _, service := range provider.Services() {
 			if service.Name() == m.SelectedService.Name {
 				selectedService = service
@@ -277,7 +277,7 @@ func getRowsForView(m *model.Model) []table.Row {
 		}
 
 		// Find the selected category
-		var selectedCategory providers.Category
+		var selectedCategory cloud.Category
 		for _, category := range selectedService.Categories() {
 			if category.Name() == m.SelectedCategory.Name {
 				selectedCategory = category
@@ -292,14 +292,18 @@ func getRowsForView(m *model.Model) []table.Row {
 		// Get all operations from the category
 		operations := selectedCategory.Operations()
 
-		// Filter out internal operations
-		var visibleOperations []providers.Operation
+		// Filter out non-UI visible operations
+		var visibleOperations []cloud.Operation
 		for _, operation := range operations {
-			// Only include operations that are marked as UI visible
 			if operation.IsUIVisible() {
 				visibleOperations = append(visibleOperations, operation)
 			}
 		}
+
+		// Sort operations alphabetically by name
+		sort.Slice(visibleOperations, func(i, j int) bool {
+			return visibleOperations[i].Name() < visibleOperations[j].Name()
+		})
 
 		rows := make([]table.Row, len(visibleOperations))
 		for i, operation := range visibleOperations {

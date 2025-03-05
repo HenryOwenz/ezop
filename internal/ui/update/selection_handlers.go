@@ -1,7 +1,7 @@
 package update
 
 import (
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/view"
@@ -22,7 +22,7 @@ func SelectService(m *model.Model) (tea.Model, tea.Cmd) {
 		}
 
 		// Find the selected service
-		var selectedService providers.Service
+		var selectedService cloud.Service
 		for _, service := range provider.Services() {
 			if service.Name() == serviceName {
 				selectedService = service
@@ -58,7 +58,7 @@ func SelectCategory(m *model.Model) (tea.Model, tea.Cmd) {
 		}
 
 		// Find the selected service
-		var selectedService providers.Service
+		var selectedService cloud.Service
 		for _, service := range provider.Services() {
 			if service.Name() == m.SelectedService.Name {
 				selectedService = service
@@ -71,7 +71,7 @@ func SelectCategory(m *model.Model) (tea.Model, tea.Cmd) {
 		}
 
 		// Find the selected category
-		var selectedCategory providers.Category
+		var selectedCategory cloud.Category
 		for _, category := range selectedService.Categories() {
 			if category.Name() == categoryName {
 				selectedCategory = category
@@ -107,7 +107,7 @@ func SelectOperation(m *model.Model) (tea.Model, tea.Cmd) {
 		}
 
 		// Find the selected service
-		var selectedService providers.Service
+		var selectedService cloud.Service
 		for _, service := range provider.Services() {
 			if service.Name() == m.SelectedService.Name {
 				selectedService = service
@@ -120,7 +120,7 @@ func SelectOperation(m *model.Model) (tea.Model, tea.Cmd) {
 		}
 
 		// Find the selected category
-		var selectedCategory providers.Category
+		var selectedCategory cloud.Category
 		for _, category := range selectedService.Categories() {
 			if category.Name() == m.SelectedCategory.Name {
 				selectedCategory = category
@@ -133,7 +133,7 @@ func SelectOperation(m *model.Model) (tea.Model, tea.Cmd) {
 		}
 
 		// Find the selected operation
-		var selectedOperation providers.Operation
+		var selectedOperation cloud.Operation
 		for _, operation := range selectedCategory.Operations() {
 			if operation.Name() == operationName {
 				selectedOperation = operation

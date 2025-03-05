@@ -13,6 +13,7 @@ import (
 )
 
 // CloudManualApprovalOperation represents an operation to manage manual approvals in CodePipeline.
+// It implements the cloud.CodePipelineManualApprovalOperation interface.
 type CloudManualApprovalOperation struct {
 	profile string
 	region  string

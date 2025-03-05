@@ -1,11 +1,10 @@
-package integration_test
+package integration
 
 import (
-	"github.com/HenryOwenz/cloudgate/internal/providers"
-	"github.com/HenryOwenz/cloudgate/internal/providers/testutil"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 )
 
-// CreateMockAWSProvider is a helper function that creates a mock AWS provider.
-func CreateMockAWSProvider() providers.Provider {
-	return testutil.NewMockAWSProvider()
+// CreateMockAWSProvider creates a mock AWS provider for testing
+func CreateMockAWSProvider() cloud.Provider {
+	return &MockAWSProvider{}
 }

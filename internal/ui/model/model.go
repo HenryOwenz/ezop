@@ -10,7 +10,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/HenryOwenz/cloudgate/internal/cloud"
-	"github.com/HenryOwenz/cloudgate/internal/providers"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/styles"
 )
@@ -39,7 +38,7 @@ type Model struct {
 	LoadingMsg string
 
 	// Provider Registry
-	Registry *providers.ProviderRegistry
+	Registry *cloud.ProviderRegistry
 
 	// Provider state
 	ProviderState ProviderState
@@ -53,7 +52,7 @@ type Model struct {
 	AwsRegion         string
 	Profiles          []string
 	Regions           []string
-	Provider          providers.Provider
+	Provider          cloud.Provider
 	Approvals         []cloud.ApprovalAction
 	Pipelines         []cloud.PipelineStatus
 	Functions         []cloud.FunctionStatus
@@ -176,7 +175,7 @@ func New() *Model {
 		Table:       t,
 		CurrentView: constants.ViewProviders,
 		Styles:      styles.DefaultStyles(),
-		Registry:    providers.NewProviderRegistry(),
+		Registry:    cloud.NewProviderRegistry(),
 
 		// Initialize new state structures
 		ProviderState: ProviderState{

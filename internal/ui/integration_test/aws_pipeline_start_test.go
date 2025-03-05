@@ -1,9 +1,9 @@
-package integration_test
+package integration
 
 import (
 	"testing"
 
-	"github.com/HenryOwenz/cloudgate/internal/providers"
+	"github.com/HenryOwenz/cloudgate/internal/cloud"
 	"github.com/HenryOwenz/cloudgate/internal/ui/constants"
 	"github.com/HenryOwenz/cloudgate/internal/ui/model"
 	"github.com/HenryOwenz/cloudgate/internal/ui/update"
@@ -15,7 +15,7 @@ func TestAWSPipelineStartFlow(t *testing.T) {
 	m := model.New()
 
 	// Set up the AWS provider
-	registry := providers.NewProviderRegistry()
+	registry := cloud.NewProviderRegistry()
 	registry.Register(CreateMockAWSProvider())
 	m.Registry = registry
 

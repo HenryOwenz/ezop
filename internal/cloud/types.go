@@ -32,6 +32,39 @@ type Provider interface {
 
 	// GetStartPipelineOperation returns the start pipeline operation
 	GetStartPipelineOperation() (StartPipelineOperation, error)
+
+	// GetAuthenticationMethods returns available authentication methods
+	GetAuthenticationMethods() []string
+
+	// GetAuthConfigKeys returns configuration keys for the specified authentication method
+	GetAuthConfigKeys(method string) []string
+
+	// Authenticate authenticates using the provided method and configuration
+	Authenticate(method string, authConfig map[string]string) error
+
+	// IsAuthenticated checks if the provider is authenticated
+	IsAuthenticated() bool
+
+	// GetConfigKeys returns required configuration keys
+	GetConfigKeys() []string
+
+	// GetConfigOptions returns available options for a configuration key
+	GetConfigOptions(key string) ([]string, error)
+
+	// Configure configures the provider with the given configuration
+	Configure(config map[string]string) error
+
+	// GetApprovals returns pending approvals for the provider
+	GetApprovals(ctx context.Context) ([]ApprovalAction, error)
+
+	// ApproveAction approves or rejects an approval action
+	ApproveAction(ctx context.Context, action ApprovalAction, approved bool, comment string) error
+
+	// GetStatus returns the status of all pipelines
+	GetStatus(ctx context.Context) ([]PipelineStatus, error)
+
+	// StartPipeline starts a pipeline execution
+	StartPipeline(ctx context.Context, pipelineName string, commitID string) error
 }
 
 // Service represents a cloud service.

@@ -161,10 +161,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			view.UpdateTableForView(newCore)
 			return Model{core: newCore}, nil
 		case constants.KeyUp, constants.KeyAltUp:
+			// If in text input mode, pass 'k' to the text input
+			if m.core.ManualInput && msg.String() == constants.KeyAltUp {
+				newModel := m.Clone()
+				var cmd tea.Cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
+			}
 			newModel := m.Clone()
 			newModel.core.Table.MoveUp(1)
 			return newModel, nil
 		case constants.KeyDown, constants.KeyAltDown:
+			// If in text input mode, pass 'j' to the text input
+			if m.core.ManualInput && msg.String() == constants.KeyAltDown {
+				newModel := m.Clone()
+				var cmd tea.Cmd
+				newModel.core.TextInput, cmd = newModel.core.TextInput.Update(msg)
+				return newModel, cmd
+			}
 			newModel := m.Clone()
 			newModel.core.Table.MoveDown(1)
 			return newModel, nil

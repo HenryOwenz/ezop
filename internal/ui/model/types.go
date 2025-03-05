@@ -2,7 +2,6 @@ package model
 
 import (
 	"github.com/HenryOwenz/cloudgate/internal/cloud"
-	"github.com/HenryOwenz/cloudgate/internal/providers"
 )
 
 // Service represents a cloud service
@@ -48,7 +47,7 @@ type FunctionStatus = cloud.FunctionStatus
 // ApprovalsMsg represents a message containing approvals
 type ApprovalsMsg struct {
 	Approvals []ApprovalAction
-	Provider  providers.Provider
+	Provider  cloud.Provider
 }
 
 // ApprovalResultMsg represents the result of an approval action
@@ -59,7 +58,7 @@ type ApprovalResultMsg struct {
 // PipelineStatusMsg represents a message containing pipeline status
 type PipelineStatusMsg struct {
 	Pipelines []PipelineStatus
-	Provider  providers.Provider
+	Provider  cloud.Provider
 }
 
 // PipelineExecutionMsg represents the result of a pipeline execution
@@ -70,5 +69,5 @@ type PipelineExecutionMsg struct {
 // FunctionStatusMsg represents a message containing function status
 type FunctionStatusMsg struct {
 	Functions []FunctionStatus
-	Provider  providers.Provider
+	Provider  cloud.Provider
 }
