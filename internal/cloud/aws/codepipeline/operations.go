@@ -67,10 +67,10 @@ func (o *CloudManualApprovalOperation) GetPendingApprovals(ctx context.Context) 
 
 	var approvals []cloud.ApprovalAction
 
-	// Check each pipeline for pending approvals
+	// Get approvals for each pipeline
 	for _, pipeline := range pipelineOutput.Pipelines {
 		// Get pipeline details
-		pipelineOutput, err := client.GetPipeline(ctx, &codepipeline.GetPipelineInput{
+		pipelineResp, err := client.GetPipeline(ctx, &codepipeline.GetPipelineInput{
 			Name: pipeline.Name,
 		})
 		if err != nil {
@@ -78,7 +78,7 @@ func (o *CloudManualApprovalOperation) GetPendingApprovals(ctx context.Context) 
 		}
 
 		// Get pipeline state
-		stateOutput, err := client.GetPipelineState(ctx, &codepipeline.GetPipelineStateInput{
+		stateResp, err := client.GetPipelineState(ctx, &codepipeline.GetPipelineStateInput{
 			Name: pipeline.Name,
 		})
 		if err != nil {
@@ -86,7 +86,7 @@ func (o *CloudManualApprovalOperation) GetPendingApprovals(ctx context.Context) 
 		}
 
 		// Find pending approvals
-		pipelineApprovals := findCloudPendingApprovals(*pipeline.Name, pipelineOutput.Pipeline.Stages, stateOutput.StageStates)
+		pipelineApprovals := findCloudPendingApprovals(*pipeline.Name, pipelineResp.Pipeline.Stages, stateResp.StageStates)
 		approvals = append(approvals, pipelineApprovals...)
 	}
 
@@ -106,20 +106,22 @@ func (o *CloudManualApprovalOperation) ApproveAction(ctx context.Context, action
 
 	client := codepipeline.NewFromConfig(cfg)
 
-	status := cpTypes.ApprovalStatusApproved
-	if !approved {
-		status = cpTypes.ApprovalStatusRejected
+	// Set the approval status
+	status := cpTypes.ApprovalStatusRejected
+	if approved {
+		status = cpTypes.ApprovalStatusApproved
 	}
 
+	// Put the approval result
 	_, err = client.PutApprovalResult(ctx, &codepipeline.PutApprovalResultInput{
 		ActionName:   aws.String(action.ActionName),
 		PipelineName: aws.String(action.PipelineName),
+		StageName:    aws.String(action.StageName),
 		Result: &cpTypes.ApprovalResult{
 			Status:  status,
 			Summary: aws.String(comment),
 		},
-		StageName: aws.String(action.StageName),
-		Token:     aws.String(action.Token),
+		Token: aws.String(action.Token),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to put approval result: %w", err)
@@ -254,7 +256,7 @@ func (o *CloudStartPipelineOperation) Name() string {
 
 // Description returns the operation's description.
 func (o *CloudStartPipelineOperation) Description() string {
-	return "Trigger Pipeline Execution"
+	return "Start Pipeline Execution"
 }
 
 // IsUIVisible returns whether this operation should be visible in the UI.
@@ -264,21 +266,20 @@ func (o *CloudStartPipelineOperation) IsUIVisible() bool {
 
 // Execute executes the operation with the given parameters.
 func (o *CloudStartPipelineOperation) Execute(ctx context.Context, params map[string]interface{}) (interface{}, error) {
-	pipelineName, ok := params["pipelineName"].(string)
+	// Get pipeline name and commit ID from parameters
+	pipelineName, ok := params["pipeline_name"].(string)
 	if !ok {
-		return nil, fmt.Errorf("pipelineName parameter is required")
+		return nil, fmt.Errorf("pipeline_name parameter is required")
 	}
 
-	commitID, ok := params["commitID"].(string)
-	if !ok {
-		commitID = "" // Default to empty string if not provided
-	}
+	commitID, _ := params["commit_id"].(string)
 
+	// Start the pipeline
 	return nil, o.StartPipelineExecution(ctx, pipelineName, commitID)
 }
 
 // StartPipelineExecution starts a pipeline execution.
-func (o *CloudStartPipelineOperation) StartPipelineExecution(ctx context.Context, pipelineName string, commitID string) error {
+func (o *CloudStartPipelineOperation) StartPipelineExecution(ctx context.Context, pipelineName, commitID string) error {
 	// Create a new AWS SDK client
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithSharedConfigProfile(o.profile),
@@ -290,15 +291,12 @@ func (o *CloudStartPipelineOperation) StartPipelineExecution(ctx context.Context
 
 	client := codepipeline.NewFromConfig(cfg)
 
+	// Create the input
 	input := &codepipeline.StartPipelineExecutionInput{
 		Name: aws.String(pipelineName),
 	}
 
-	// Add commit ID if provided
-	if commitID != "" {
-		input.ClientRequestToken = aws.String(commitID)
-	}
-
+	// Start the pipeline execution
 	_, err = client.StartPipelineExecution(ctx, input)
 	if err != nil {
 		return fmt.Errorf("failed to start pipeline execution: %w", err)
@@ -307,25 +305,26 @@ func (o *CloudStartPipelineOperation) StartPipelineExecution(ctx context.Context
 	return nil
 }
 
-// Helper functions
-
-// findCloudPendingApprovals returns a list of pending approval actions from the given stages and their states.
+// findCloudPendingApprovals finds all pending manual approval actions in a pipeline.
 func findCloudPendingApprovals(pipelineName string, stages []cpTypes.StageDeclaration, stageStates []cpTypes.StageState) []cloud.ApprovalAction {
-	var approvals []cloud.ApprovalAction
+	// Build a map of action types for quick lookup
 	actionTypes := buildCloudActionTypeMap(stages)
-	stateMap := buildCloudStageStateMap(stageStates)
 
+	// Build a map of stage states for quick lookup
+	stageStateMap := buildCloudStageStateMap(stageStates)
+
+	// Find pending approvals in each stage
+	var approvals []cloud.ApprovalAction
 	for _, stage := range stages {
-		if state, ok := stateMap[*stage.Name]; ok {
-			stageApprovals := findCloudStageApprovals(pipelineName, stage, state, actionTypes)
-			approvals = append(approvals, stageApprovals...)
+		if state, ok := stageStateMap[*stage.Name]; ok {
+			approvals = append(approvals, findCloudStageApprovals(pipelineName, stage, state, actionTypes)...)
 		}
 	}
 
 	return approvals
 }
 
-// buildCloudActionTypeMap creates a map of action names to their categories for quick lookup.
+// buildCloudActionTypeMap builds a map of action types for quick lookup.
 func buildCloudActionTypeMap(stages []cpTypes.StageDeclaration) map[string]cpTypes.ActionCategory {
 	actionTypes := make(map[string]cpTypes.ActionCategory)
 	for _, stage := range stages {
@@ -333,43 +332,41 @@ func buildCloudActionTypeMap(stages []cpTypes.StageDeclaration) map[string]cpTyp
 			actionTypes[*action.Name] = action.ActionTypeId.Category
 		}
 	}
-
 	return actionTypes
 }
 
-// buildCloudStageStateMap creates a map of stage names to their states for quick lookup.
+// buildCloudStageStateMap builds a map of stage states for quick lookup.
 func buildCloudStageStateMap(stageStates []cpTypes.StageState) map[string]cpTypes.StageState {
-	stateMap := make(map[string]cpTypes.StageState)
+	stageStateMap := make(map[string]cpTypes.StageState)
 	for _, state := range stageStates {
-		stateMap[*state.StageName] = state
+		stageStateMap[*state.StageName] = state
 	}
-
-	return stateMap
+	return stageStateMap
 }
 
-// findCloudStageApprovals returns a list of pending approval actions from a single stage.
+// findCloudStageApprovals finds all pending manual approval actions in a stage.
 func findCloudStageApprovals(pipelineName string, stage cpTypes.StageDeclaration, state cpTypes.StageState, actionTypes map[string]cpTypes.ActionCategory) []cloud.ApprovalAction {
 	var approvals []cloud.ApprovalAction
 	for _, actionState := range state.ActionStates {
-		if actionState.ActionName != nil && isCloudApprovalAction(actionState, actionTypes) {
-			approval := cloud.ApprovalAction{
-				PipelineName: pipelineName,
-				StageName:    *stage.Name,
-				ActionName:   *actionState.ActionName,
-				Token:        *actionState.LatestExecution.Token,
+		if actionState.ActionName != nil && isCloudApprovalAction(*actionState.ActionName, actionTypes) {
+			// Check if the action is waiting for approval
+			if actionState.LatestExecution != nil && actionState.LatestExecution.Status == cpTypes.ActionExecutionStatusInProgress {
+				if actionState.LatestExecution.Token != nil {
+					approvals = append(approvals, cloud.ApprovalAction{
+						PipelineName: pipelineName,
+						StageName:    *state.StageName,
+						ActionName:   *actionState.ActionName,
+						Token:        *actionState.LatestExecution.Token,
+					})
+				}
 			}
-			approvals = append(approvals, approval)
 		}
 	}
-
 	return approvals
 }
 
-// isCloudApprovalAction checks if the given action state represents a pending manual approval.
-func isCloudApprovalAction(actionState cpTypes.ActionState, actionTypes map[string]cpTypes.ActionCategory) bool {
-	return actionState.LatestExecution != nil &&
-		actionState.LatestExecution.Token != nil &&
-		actionState.LatestExecution.Status == cpTypes.ActionExecutionStatusInProgress &&
-		actionState.ActionName != nil &&
-		actionTypes[*actionState.ActionName] == cpTypes.ActionCategoryApproval
+// isCloudApprovalAction checks if an action is a manual approval action.
+func isCloudApprovalAction(actionName string, actionTypes map[string]cpTypes.ActionCategory) bool {
+	category, ok := actionTypes[actionName]
+	return ok && category == cpTypes.ActionCategoryApproval
 }
